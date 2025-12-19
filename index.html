@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eternal Flow: Möbius Production</title>
+    <title>Looping Dreams</title>
     <style>
         body {
             margin: 0;
@@ -31,6 +31,15 @@
             color: rgba(255, 255, 255, 1.0);
             pointer-events: none;
             mix-blend-mode: exclusion;
+        }
+
+        /* 新增：中文标题样式 */
+        .cn-title {
+            font-size: 16px;
+            font-weight: 300;
+            letter-spacing: 4px;
+            margin-bottom: 5px;
+            opacity: 0.9;
         }
 
         /* 专辑名称标签 */
@@ -105,7 +114,7 @@
             transform: scale(1.1);
         }
 
-        /* 特定专辑的播放按钮 (恢复) */
+        /* 特定专辑的播放按钮 */
         #track-play-btn {
             position: absolute;
             top: 50%;
@@ -116,11 +125,12 @@
             height: 50px;
             border: 2px solid rgba(255, 255, 255, 0.8);
             border-radius: 50%;
-            background: rgba(0, 0, 0, 0.2); /* 透明度80% */
-            display: none; /* 默认严格隐藏 */
+            background: rgba(0, 0, 0, 0.2);
+            display: none;
             cursor: pointer;
             pointer-events: auto;
             transition: transform 0.2s, background 0.2s;
+            display: flex;
             align-items: center;
             justify-content: center;
         }
@@ -224,8 +234,9 @@
     </div>
 
     <div id="ui-layer">
-        <h1>Infinite Gallery</h1>
-        <p>Collection // Final Build</p>
+        <div class="cn-title">莫比乌斯电台</div>
+        <h1>Looping Dreams</h1>
+        <p>We are destined to cross again.</p>
         <div class="instruction">
             L-CLICK DRAG TO ROTATE<br>
             M-CLICK DRAG TO PAN<br>
@@ -804,6 +815,19 @@
                 resetFlip(focusedAlbum);
             }
 
+            // --- 新增：恢复所有卡片的正常深度遮挡关系和可见性 ---
+            albums.forEach(group => {
+                group.visible = true; // 恢复可见
+                const mesh = group.userData.innerMesh;
+                mesh.renderOrder = 0; 
+                if (Array.isArray(mesh.material)) {
+                    mesh.material.forEach(m => m.depthTest = true); 
+                } else {
+                    mesh.material.depthTest = true;
+                }
+            });
+            // ------------------------------------------
+
             isFocused = false;
             focusedAlbum = null;
 
@@ -928,7 +952,9 @@
             raycaster.setFromCamera(mouse, camera);
             scene.updateMatrixWorld();
             const allMeshes = [];
-            albums.forEach(group => allMeshes.push(group.userData.innerMesh));
+            albums.forEach(group => {
+                if(group.visible) allMeshes.push(group.userData.innerMesh);
+            });
             const intersects = raycaster.intersectObjects(allMeshes);
 
             if (intersects.length > 0) {
@@ -940,7 +966,10 @@
                     if (clickedGroup === focusedAlbum) {
                         toggleFlip(clickedGroup);
                     } else {
-                        resetFlip(focusedAlbum);
+                        // 切换聚焦前先重置 visibility
+                        resetGlobalView();
+                        // 下一帧再聚焦，或直接重置状态
+                        // 简单处理：直接聚焦新卡片，focusOnAlbum 会处理隐藏逻辑
                         focusOnAlbum(clickedGroup);
                     }
                 }
@@ -977,6 +1006,76 @@
             // 重置轨道旋转角度
             focusRotX = 0;
             focusRotY = 0;
+
+            scene.updateMatrixWorld();
+            const worldPos = new THREE.Vector3();
+            group.getWorldPosition(worldPos);
+            const worldQuat = new THREE.Quaternion();
+            group.getWorldQuaternion(worldQuat);
+            const worldNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(worldQuat);
+            const worldUp = new THREE.Vector3(0, 1, 0).applyQuaternion(worldQuat);
+
+            camLookAtPos.copy(worldPos);
+            const distance = 8.0; 
+            camTargetPos.copy(worldPos).add(worldNormal.multiplyScalar(distance));
+            camTargetUp.copy(worldUp);
+
+            // --- 智能遮挡剔除 (Smart Occlusion Culling) ---
+            // 1. 先让所有卡片可见
+            albums.forEach(g => g.visible = true);
+            
+            // 2. 定义目标卡片上的关键检测点 (中心 + 四角)
+            // 卡片大小是 4x4, 我们检测稍微向内一点的范围(1.8)以防边缘误差
+            const checkPointsLocal = [
+                new THREE.Vector3(0, 0, 0),    // 中心
+                new THREE.Vector3(1.8, 1.8, 0),  // 右上
+                new THREE.Vector3(-1.8, 1.8, 0), // 左上
+                new THREE.Vector3(1.8, -1.8, 0), // 右下
+                new THREE.Vector3(-1.8, -1.8, 0) // 左下
+            ];
+
+            // 3. 获取所有 Mesh 用于检测 (排除当前的)
+            const allMeshes = albums.map(g => g.userData.innerMesh);
+            const targetMesh = group.userData.innerMesh;
+
+            // 4. 发射射线检测遮挡
+            const occlusionRaycaster = new THREE.Raycaster();
+            const blockers = new Set(); // 用 Set 存储被标记为遮挡的组(去重)
+
+            checkPointsLocal.forEach(localPoint => {
+                // 将局部坐标转为世界坐标
+                const targetPoint = localPoint.clone().applyMatrix4(targetMesh.matrixWorld);
+                
+                // 计算射线方向：从相机目标位置 -> 卡片上的点
+                const direction = new THREE.Vector3().subVectors(targetPoint, camTargetPos).normalize();
+                
+                // 设置射线：起点是相机目标位置
+                occlusionRaycaster.set(camTargetPos, direction);
+                
+                // 检测相交
+                // far 设置为到目标点的距离，稍微大一点点以容错，但不要射穿到后面去
+                occlusionRaycaster.far = camTargetPos.distanceTo(targetPoint) + 0.1;
+                
+                const intersects = occlusionRaycaster.intersectObjects(allMeshes);
+                
+                for (let hit of intersects) {
+                    // 如果射到了目标自己，说明这条线上没障碍了（或者穿过了障碍到了目标）
+                    // 这里的逻辑是：intersects 是按距离排序的
+                    // 如果第一个打到的不是目标，那就是遮挡物
+                    if (hit.object === targetMesh) {
+                        // 到了目标，这条射线检测结束
+                        break; 
+                    } else {
+                        // 打到了别的物体，这就是遮挡物！
+                        // 把它所属的 Group 加入黑名单
+                        blockers.add(hit.object.parent);
+                    }
+                }
+            });
+
+            // 5. 隐藏所有遮挡物
+            blockers.forEach(g => g.visible = false);
+            // ----------------------------------------------------
 
             const label = group.userData.labelText; 
             const info = albumData[label] || { 
@@ -1044,6 +1143,8 @@
             particleMaterial.uniforms.uGlobalAlpha.value = currentGlobalAlpha;
 
             albums.forEach((group) => {
+                // 如果不可见，为了性能可以跳过大部分逻辑，但位置计算仍需保持同步
+                // 为了简单，我们只跳过渲染相关的更新，位置逻辑保持
                 const mesh = group.userData.innerMesh;
                 
                 // 如果未暂停，更新专辑位置
