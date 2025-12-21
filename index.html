@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Looping Dreams</title>
+    <title>记忆之莫比乌斯</title>
     <style>
         body {
             margin: 0;
@@ -21,28 +21,101 @@
             top: 0;
             left: 0;
             z-index: 1;
+            filter: brightness(1) contrast(1);
+            transition: filter 0.1s;
         }
 
-        #ui-layer {
-            position: absolute;
+        /* ================== UI 元素 (初始隐藏) ================== */
+        .ui-element {
+            opacity: 0 !important; 
+            transition: opacity 2s ease;
+            pointer-events: none;
+        }
+        
+        .ui-element.fade-in {
+            opacity: 1 !important;
+            pointer-events: auto;
+        }
+
+        #intro-hint {
+            position: fixed;
             bottom: 40px;
             left: 40px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            letter-spacing: 4px;
+            font-weight: 300;
+            z-index: 20000;
+            pointer-events: none;
+            animation: blink-anim 3s infinite ease-in-out;
+            text-transform: uppercase;
+        }
+
+        @keyframes blink-anim {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1.0; }
+        }
+
+        #top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            z-index: 10;
+            display: flex;
+            justify-content: flex-end;
+            padding: 30px 40px;
+            box-sizing: border-box;
+            pointer-events: none; /* Let clicks pass through bar area */
+        }
+
+        #user-icon-btn {
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: auto; /* Ensure icon is clickable */
+        }
+
+        #user-icon-btn:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        #user-icon-btn svg {
+            width: 100%;
+            height: 100%;
+            fill: none;
+            stroke: #fff;
+            stroke-width: 1.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* --- 这里控制左下角整体（图片+文字）的位置 --- */
+        #ui-layer {
+            position: absolute;
+            bottom: 40px; 
+            left: 40px;   
             z-index: 2;
             color: rgba(255, 255, 255, 1.0);
             pointer-events: none;
             mix-blend-mode: exclusion;
         }
 
-        /* 新增：中文标题样式 */
-        .cn-title {
-            font-size: 16px;
-            font-weight: 300;
-            letter-spacing: 4px;
-            margin-bottom: 5px;
-            opacity: 0.9;
+        /* --- 左下角标题图片样式 --- */
+        #ui-title-img {
+            width: 420px; 
+            display: block;
+            margin-bottom: 15px; 
+            opacity: 0.95;
+            position: relative; 
+            left: -100px;  
+            top: 120px;   
         }
 
-        /* 专辑名称标签 */
         #album-label {
             position: absolute;
             top: 73%;
@@ -71,7 +144,15 @@
             font-weight: normal;
         }
 
-        /* 通用按钮样式 */
+        #resonance-meter {
+            display: block;
+            margin-top: 8px;
+            font-size: 10px;
+            color: #00ffcc;
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px #00ffcc;
+        }
+
         .control-btn {
             position: absolute;
             width: 44px;
@@ -82,13 +163,13 @@
             transition: opacity 0.3s, transform 0.5s ease, background 0.3s;
             border-radius: 50%;
             border: 1px solid rgba(255, 255, 255, 0.4);
-            display: flex; 
+            display: flex;
             align-items: center; 
             justify-content: center; 
             background: rgba(0, 0, 0, 0.6); 
             backdrop-filter: blur(4px);
-            pointer-events: auto;
             padding: 0;
+            pointer-events: auto;
         }
 
         .control-btn:hover {
@@ -96,160 +177,400 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
-        /* 重置按钮位置 */
-        #reset-btn {
-            top: 40px;
-            left: 40px;
-        }
-        #reset-btn:hover {
-            transform: rotate(-90deg);
-        }
+        #reset-btn { top: 40px; left: 40px; }
+        #reset-btn:hover { transform: rotate(-90deg); }
+        #play-pause-btn { top: 100px; left: 40px; }
+        #play-pause-btn:hover { transform: scale(1.1); }
 
-        /* 播放/暂停按钮位置 */
-        #play-pause-btn {
-            top: 100px; 
-            left: 40px; 
-        }
-        #play-pause-btn:hover {
-            transform: scale(1.1);
-        }
-
-        /* 特定专辑的播放按钮 */
+        /* =================== 按钮位置修改区 =================== */
+        
         #track-play-btn {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(108px, 108px); 
-            z-index: 20;
-            width: 50px;
-            height: 50px;
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(220px, -30px); 
+            z-index: 20; 
+            width: 30px; height: 30px; 
             border: 2px solid rgba(255, 255, 255, 0.8);
             border-radius: 50%;
-            background: rgba(0, 0, 0, 0.2);
-            display: none;
-            cursor: pointer;
-            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.4);
+            display: none; cursor: pointer;
             transition: transform 0.2s, background 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            align-items: center; justify-content: center;
+            pointer-events: auto;
         }
-        
-        #track-play-btn svg {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 26px;
-            height: 26px;
-            fill: none;
-            stroke: #fff;
-            stroke-width: 0; 
-        }
-        #track-icon-play path, #track-icon-pause path {
-             fill: white; 
-             stroke: none;
-        }
-
         #track-play-btn:hover {
-            transform: translate(108px, 108px) scale(1.1);
             background: rgba(255, 255, 255, 0.2);
-        }
-
-        /* 左上角控制按钮的 SVG */
-        .control-btn svg {
-            width: 26px;
-            height: 26px;
-            fill: none;
-            stroke: #fff;
-            stroke-width: 1.5;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-        }
-
-        h1 {
-            font-weight: 300;
-            font-size: 24px;
-            letter-spacing: 6px;
-            margin: 0 0 10px 0;
-            text-transform: uppercase;
-            text-shadow: 0 0 15px rgba(255,255,255,0.6);
-        }
-
-        p {
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.9);
-            margin: 0;
-            letter-spacing: 2px;
-            text-transform: uppercase;
+            transform: translate(220px, -30px) scale(1.2);
         }
         
-        .instruction {
-            margin-top: 24px;
-            font-size: 10px;
+        #resonate-btn {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(220px, 20px);
+            z-index: 20; 
+            width: 30px; height: 30px; 
+            border: 2px solid rgba(0, 255, 204, 0.8);
+            border-radius: 50%;
+            background: rgba(0, 50, 40, 0.6);
+            display: none; cursor: pointer;
+            transition: transform 0.1s, background 0.2s, box-shadow 0.2s;
+            align-items: center; justify-content: center;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+            pointer-events: auto;
+        }
+        #resonate-btn:hover {
+            transform: translate(220px, 20px) scale(1.2);
+            background: rgba(0, 255, 204, 0.2);
+            box-shadow: 0 0 25px rgba(0, 255, 204, 0.6);
+        }
+        #resonate-btn:active { transform: translate(220px, 20px) scale(0.95); }
+        /* ==================================================== */
+
+        .action-icon { width: 14px; height: 14px; fill: #00ffcc; stroke: none; } 
+        #track-play-btn svg, .control-btn svg {
+            width: 14px; height: 14px; fill: none; stroke: #fff; 
+            stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+        }
+        #track-icon-play path, #track-icon-pause path { fill: white; stroke: none; }
+
+        h1 { font-weight: 300; font-size: 24px; letter-spacing: 6px; margin: 0 0 10px 0; text-transform: uppercase; text-shadow: 0 0 15px rgba(255,255,255,0.6); }
+        p { font-size: 11px; color: rgba(255, 255, 255, 0.9); margin: 0; letter-spacing: 2px; text-transform: uppercase; }
+        .instruction { margin-top: 24px; font-size: 10px; opacity: 0.9; border-left: 2px solid rgba(255,255,255,0.9); padding-left: 12px; line-height: 1.8; letter-spacing: 1px; font-weight: bold; }
+        
+        #login-hint {
+            margin-top: 15px; 
+            font-size: 11px; 
+            color: #fff; 
+            letter-spacing: 2px; 
+            text-transform: uppercase;
+            font-weight: normal;
+            animation: blink-anim 3s infinite ease-in-out;
             opacity: 0.9;
-            border-left: 2px solid rgba(255,255,255,0.9);
-            padding-left: 12px;
-            line-height: 1.8;
-            letter-spacing: 1px;
-            font-weight: bold;
+        }
+
+        /* --- 弹窗样式调整 --- */
+        #overlay-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: transparent; 
+            z-index: 1000; 
+            display: none; 
+            justify-content: center; 
+            align-items: center; 
+            color: #fff;
+            /* 恢复 auto，阻止点击穿透到 3D 场景，同时捕获点击以关闭弹窗 */
+            pointer-events: auto; 
+        }
+        #overlay-container.active { 
+            display: flex; 
+        }
+        
+        /* 移除关闭按钮 */
+        .close-overlay { display: none; }
+        
+        /* 模态框样式 */
+        .modal-box {
+            width: 380px; padding: 40px; background: rgba(20, 20, 20, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8); text-align: center; display: none;
+            /* 确保模态框内容可点击 */
+            pointer-events: auto; 
+            /* 初始状态 */
+            opacity: 0;
+            transform: translateY(-20px);
+            animation: slideIn 0.3s forwards;
+        }
+        .modal-box.active { display: block; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 离开动画 */
+        @keyframes slideDownOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(50px); }
+        }
+        
+        .modal-box.closing {
+            animation: slideDownOut 0.3s forwards !important;
+        }
+
+        .modal-title { font-size: 20px; font-weight: 300; margin-bottom: 25px; letter-spacing: 3px; text-transform: uppercase; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; font-size: 10px; color: #888; margin-bottom: 5px; letter-spacing: 1px; text-transform: uppercase; }
+        .input-field {
+            width: 100%; background: transparent; border: none; border-bottom: 1px solid #444;
+            color: #fff; font-size: 16px; padding: 10px 0; font-family: 'Courier New', monospace;
+            outline: none; transition: border-color 0.3s; box-sizing: border-box;
+        }
+        .input-field:focus { border-bottom-color: #fff; }
+        .action-btn {
+            width: 100%; padding: 12px; margin-top: 10px; background: #fff; color: #000;
+            border: none; border-radius: 4px; font-size: 12px; font-weight: bold; letter-spacing: 2px;
+            cursor: pointer; text-transform: uppercase; transition: background 0.3s;
+        }
+        .action-btn:disabled { background: #555; color: #888; cursor: not-allowed; }
+        .action-btn:hover:not(:disabled) { background: #ccc; }
+        .switch-mode { margin-top: 20px; font-size: 12px; color: #666; cursor: pointer; text-decoration: underline; }
+        .switch-mode:hover { color: #fff; }
+        .profile-info { text-align: left; margin-bottom: 20px; }
+        .profile-info div { margin-bottom: 8px; font-size: 14px; letter-spacing: 1px; }
+        .profile-info span { color: #888; font-size: 12px; }
+        
+        .section-title { text-align: left; font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        
+        /* 颜色选择器 */
+        .color-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin: 15px 0; }
+        .color-swatch { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s, box-shadow 0.2s; }
+        .color-swatch:hover { transform: scale(1.1); }
+        .color-swatch.selected { border-color: #fff; box-shadow: 0 0 10px #fff; transform: scale(1.1); }
+        
+        /* 规则文本 */
+        .rules-text { font-size: 10px; color: #aaa; text-align: left; margin: 15px 0; border-left: 2px solid #555; padding-left: 10px; line-height: 1.5; }
+        
+        /* 列表样式 */
+        .resonance-list { max-height: 150px; overflow-y: auto; text-align: left; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
+        .resonance-item { font-size: 11px; color: #aaa; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .resonance-item .info { flex: 1; }
+        .resonance-item strong { color: #fff; font-size: 13px; display: block; margin-bottom: 2px; }
+        .resonance-item span { font-size: 10px; color: #888; }
+        .resonance-controls { display: flex; gap: 5px; align-items: center; }
+        .ctrl-btn { width: 20px; height: 20px; background: #333; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; display:flex; align-items:center; justify-content:center; transition: background 0.2s; }
+        .ctrl-btn:hover { background: #555; }
+        .del-btn { color: #ff4444; background: transparent; border: 1px solid #ff4444; margin-left: 5px; width: auto; padding: 0 5px; }
+        .del-btn:hover { background: #ff4444; color: #fff; }
+        
+        .resonance-list::-webkit-scrollbar { width: 4px; }
+        .resonance-list::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+        /* ================= 老电视故障特效容器 ================= */
+        #glitch-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 5000;
+            pointer-events: none;
+            display: none;
+        }
+        
+        body.glitch-active #canvas-container {
+            animation: rgb-shake 0.1s infinite;
+            filter: contrast(2) brightness(1.5) sepia(1);
+        }
+        
+        body.glitch-active #glitch-overlay {
+            display: block;
+            background: rgba(0,0,0,0.1);
+        }
+        
+        @keyframes rgb-shake {
+            0% { transform: translate(5px, 2px); filter: hue-rotate(0deg); }
+            10% { transform: translate(-5px, -5px); filter: hue-rotate(90deg); }
+            20% { transform: translate(-8px, 5px); filter: hue-rotate(180deg); }
+            30% { transform: translate(8px, -5px); filter: hue-rotate(270deg); }
+            40% { transform: translate(5px, 8px); filter: hue-rotate(0deg); }
+            50% { transform: translate(-5px, 5px); filter: hue-rotate(90deg); }
+            60% { transform: translate(-5px, -8px); filter: hue-rotate(180deg); }
+            70% { transform: translate(8px, 5px); filter: hue-rotate(270deg); }
+            80% { transform: translate(-8px, -5px); filter: hue-rotate(0deg); }
+            90% { transform: translate(5px, 5px); filter: hue-rotate(90deg); }
+            100% { transform: translate(0, 0); }
+        }
+
+        .scanlines {
+            width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.4));
+            background-size: 100% 4px;
+            position: absolute; top:0; left:0;
+        }
+
+        .crt-off-anim {
+            animation: turn-off 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+            background: #000;
+            position: fixed; top:0; left:0; width:100vw; height:100vh; z-index: 9999;
+        }
+
+        @keyframes turn-off {
+            0% { transform: scale(1, 1.3) translate3d(0, 0, 0); filter: brightness(1); opacity: 1; }
+            60% { transform: scale(1, 0.001) translate3d(0, 0, 0); filter: brightness(10); }
+            100% { transform: scale(0, 0.001) translate3d(0, 0, 0); filter: brightness(50); opacity: 1; }
+        }
+        
+        #black-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9000;
+            display: none;
         }
     </style>
 </head>
 <body>
 
-    <!-- 重置按钮 -->
-    <div id="reset-btn" class="control-btn" title="Reset View">
-        <svg viewBox="0 0 24 24">
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-            <path d="M3 3v5h5" />
+    <div id="intro-hint">点击任意处以继续</div>
+    <div id="glitch-overlay"><div class="scanlines"></div></div>
+    <div id="black-screen"></div>
+
+    <div id="top-bar" class="ui-element">
+        <div id="user-icon-btn" title="User Profile / Login">
+            <svg viewBox="0 0 24 24">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+        </div>
+    </div>
+
+    <div id="overlay-container">
+        <!-- Close button removed -->
+        <div class="modal-box" id="modal-login">
+            <div class="modal-title">ACCESS TERMINAL</div>
+            <div class="input-group">
+                <label>USERNAME</label>
+                <input type="text" id="login-username" class="input-field" placeholder="Username" />
+            </div>
+            <div class="input-group">
+                <label>PASSWORD</label>
+                <input type="password" id="login-password" class="input-field" placeholder="********" />
+            </div>
+            <button class="action-btn" id="btn-login" disabled>INITIALIZING...</button>
+            <div class="switch-mode" onclick="uiManager.switchModal('register')">Create New ID</div>
+            <div id="login-msg-area" style="margin-top:10px; color:#ff4444; font-size:12px;"></div>
+        </div>
+        <div class="modal-box" id="modal-register">
+            <div class="modal-title">NEW IDENTITY</div>
+            <div class="input-group">
+                <label>USERNAME (Chinese/Eng/_)</label>
+                <input type="text" id="reg-username" class="input-field" placeholder="Unique Name" />
+            </div>
+            <div class="input-group">
+                <label>PASSWORD</label>
+                <input type="password" id="reg-password" class="input-field" placeholder="********" />
+            </div>
+            <div class="input-group">
+                <label>CONFIRM</label>
+                <input type="password" id="reg-confirm" class="input-field" placeholder="********" />
+            </div>
+            <button class="action-btn" id="btn-register" disabled>REGISTER</button>
+            <div class="switch-mode" onclick="uiManager.switchModal('login')">Back to Login</div>
+            <div id="reg-msg-area" style="margin-top:10px; color:#ff4444; font-size:12px;"></div>
+        </div>
+        <div class="modal-box" id="modal-profile">
+            <div class="modal-title">PILOT PROFILE</div>
+            <div class="profile-info">
+                <div><span>ID:</span> <strong id="profile-id"></strong></div>
+                <div><span>STATUS:</span> <strong style="color:#00ffcc">ONLINE</strong></div>
+            </div>
+
+            <!-- Color Picker -->
+            <div class="section-title" style="margin-top: 15px;">Resonance Color (Choose 1)</div>
+            <div id="color-picker" class="color-grid">
+                <!-- Colors injected by JS -->
+            </div>
+
+            <!-- Rules -->
+            <div class="rules-text">
+                <strong>共鸣规则 / Rules:</strong><br>
+                每个用户最多可以在每张专辑上增加五次共鸣。<br>
+                Each user can add up to 5 resonances per album.
+            </div>
+            
+            <div class="section-title">Memory Log</div>
+            <div class="resonance-list" id="resonance-list">
+                <div style="padding:10px; color:#666; text-align:center;">No resonance data yet.</div>
+            </div>
+            
+            <div style="margin-top:20px; font-size:10px; color:#666; text-align: center;">
+                Contact: 18015800203@163.com
+            </div>
+
+            <button class="action-btn" id="btn-logout" style="margin-top:15px; background:transparent; border:1px solid #444; color:#fff;">LOGOUT</button>
+        </div>
+    </div>
+
+    <div id="reset-btn" class="control-btn ui-element" title="Reset View">
+        <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
+    </div>
+
+    <div id="play-pause-btn" class="control-btn ui-element" title="Play/Pause Animation">
+        <svg viewBox="0 0 24 24" id="icon-pause"><path d="M8 5v14M16 5v14" /></svg>
+        <svg viewBox="0 0 24 24" id="icon-play" style="display: none;"><path d="M8 6l10 6l-10 6z" /></svg>
+    </div>
+
+    <div id="resonate-btn" title="Resonate">
+        <svg class="action-icon" viewBox="0 0 24 24">
+            <path d="M12 2 L15 9 L22 12 L15 15 L12 22 L9 15 L2 12 L9 9 Z" />
         </svg>
     </div>
 
-    <!-- 全局播放/暂停按钮 (左上角) -->
-    <div id="play-pause-btn" class="control-btn" title="Play/Pause Animation">
-        <svg viewBox="0 0 24 24" id="icon-pause">
-            <path d="M8 5v14M16 5v14" /> 
-        </svg>
-        <svg viewBox="0 0 24 24" id="icon-play" style="display: none;">
-            <path d="M8 6l10 6l-10 6z" /> 
-        </svg>
-    </div>
-
-    <!-- 12(0) 专属播放按钮 (默认隐藏) -->
     <div id="track-play-btn" title="Play Music" style="display: none;">
-        <!-- 播放图标 -->
-        <svg viewBox="0 0 24 24" id="track-icon-play" style="display: block;">
-            <path d="M7 5l12 7l-12 7V5z" />
-        </svg>
-        <!-- 暂停图标 -->
-        <svg viewBox="0 0 24 24" id="track-icon-pause" style="display: none;">
-             <path d="M8 5h3v14H8zM13 5h3v14h-3z" />
-        </svg>
+        <svg viewBox="0 0 24 24" id="track-icon-play" style="display: block;"><path d="M7 5l12 7l-12 7V5z" /></svg>
+        <svg viewBox="0 0 24 24" id="track-icon-pause" style="display: none;"><path d="M8 5h3v14H8zM13 5h3v14h-3z" /></svg>
     </div>
 
     <div id="album-label">
         ALBUM TITLE
         <span>ARTIST NAME</span>
+        <span id="resonance-meter">SIGNAL: 0%</span>
     </div>
 
-    <div id="ui-layer">
-        <div class="cn-title">莫比乌斯电台</div>
-        <h1>Looping Dreams</h1>
-        <p>We are destined to cross again.</p>
+    <div id="ui-layer" class="ui-element">
+        <img id="ui-title-img" src="assets/intro_title.png" alt="Title">
+        <p>We are destined to meet again.</p>
         <div class="instruction">
             L-CLICK DRAG TO ROTATE<br>
             M-CLICK DRAG TO PAN<br>
             SCROLL TO ZOOM<br>
             CLICK TO FOCUS & FLIP
         </div>
+        <div id="login-hint">登录以解锁更多功能</div>
     </div>
 
     <div id="canvas-container"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-    <!-- 粒子顶点着色器 -->
+    <script type="x-shader/x-vertex" id="glitchVertexShader">
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="glitchFragmentShader">
+        uniform sampler2D tDiffuse;
+        uniform float uTime;
+        uniform float uGlitchStrength;
+        uniform float uOpacity; 
+        uniform float uDarkness; 
+        varying vec2 vUv;
+
+        float rand(vec2 co){
+            return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+        }
+
+        void main() {
+            vec2 uv = vUv;
+            float strength = uGlitchStrength;
+            if(strength > 0.0) {
+                float sliceY = floor(uv.y * 10.0);
+                float noiseVal = rand(vec2(sliceY, floor(uTime * 20.0))); 
+                if(noiseVal < 0.3 * strength) {
+                    uv.x += (rand(vec2(uTime)) - 0.5) * 0.1 * strength;
+                }
+            }
+            if(strength > 0.5) {
+                uv.x += sin(uv.y * 50.0 + uTime * 20.0) * 0.01 * strength;
+            }
+            float r = texture2D(tDiffuse, uv + vec2(0.01 * strength, 0.0)).r;
+            float g = texture2D(tDiffuse, uv).g;
+            float b = texture2D(tDiffuse, uv - vec2(0.01 * strength, 0.0)).b;
+            float a = texture2D(tDiffuse, uv).a;
+            if(strength > 0.0) {
+                float noise = rand(uv * uTime) * strength * 0.2;
+                r += noise; g += noise; b += noise;
+            }
+            vec3 finalColor = vec3(r, g, b) * (1.0 - uDarkness);
+            gl_FragColor = vec4(finalColor, a * uOpacity); 
+        }
+    </script>
+
     <script type="x-shader/x-vertex" id="vertexShader">
         uniform float uTime;
         attribute float aRandom;
@@ -258,55 +579,40 @@
         attribute float aOffset; 
         attribute float aBandPosition; 
         varying float vAlpha;
-
         void main() {
             float speed = 0.15 + aSpeed * 0.02; 
             float t = uTime * speed + aOffset;
             float radius = 35.0;  
             float u = t; 
             float v = aBandPosition; 
-            
             float cosU = cos(u);
             float sinU = sin(u);
             float cosHalfU = cos(u * 0.5);
             float sinHalfU = sin(u * 0.5);
-
             float x = (radius + v * cosHalfU) * cosU;
             float y = (radius + v * cosHalfU) * sinU;
             float z = v * sinHalfU;
-
             float wave = sin(u * 2.0); 
             z += wave * 5.0; 
-
             float hover = sin(uTime * 2.0 + aRandom * 10.0) * 0.5;
             x += hover * cosU;
             y += hover * sinU;
-
             vec3 pos = vec3(x, y, z);
             float angleX = 0.4; 
             float ca = cos(angleX);
             float sa = sin(angleX);
-            vec3 posRotated = vec3(
-                pos.x,
-                pos.y * ca - pos.z * sa,
-                pos.y * sa + pos.z * ca
-            );
-
+            vec3 posRotated = vec3(pos.x, pos.y * ca - pos.z * sa, pos.y * sa + pos.z * ca);
             vec4 mvPosition = modelViewMatrix * vec4(posRotated, 1.0);
             gl_PointSize = (aSize * 280.0) / -mvPosition.z;
             gl_Position = projectionMatrix * mvPosition;
-
             float alphaBase = 0.5 + 0.5 * sin(t * 2.0);
             vAlpha = 0.5 + 0.5 * alphaBase; 
         }
     </script>
-
-    <!-- 粒子片元着色器 -->
     <script type="x-shader/x-fragment" id="fragmentShader">
         uniform vec3 uColor;
         uniform float uGlobalAlpha; 
         varying float vAlpha;
-
         void main() {
             vec2 center = vec2(0.5, 0.5);
             float dist = distance(gl_PointCoord, center);
@@ -317,58 +623,318 @@
         }
     </script>
 
-    <script>
-        // =========================================================
-        //                 用户配置区
-        // =========================================================
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const USE_LOCAL_ASSETS = true; 
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
 
-        // 30组完整专辑数据
-        const albumData = {
-            "1(-7)": { title: "迷", artist: "（1994）" }, "1(-6)": { title: "天空", artist: "（1994）" }, "1(-5)": { title: "菲靡靡之音", artist: "（1995）" }, "1(-4)": { title: "浮躁", artist: "（1996）" }, "1(-3)": { title: "王菲", artist: "（1997）" }, "1(-2)": { title: "唱游", artist: "（1998）" }, "1(-1)": { title: "只爱陌生人", artist: "（1999）" }, "1(0)": { title: "寓言", artist: "（2000）" }, "1(1)": { title: "王菲", artist: "（2001）" }, "1(2)": { title: "将爱", artist: "（2003）" },
-            "2(-5)": { title: "宠爱", artist: "（1995）" }, "2(-4)": { title: "红", artist: "（1996）" }, "2(-3)": { title: "这些年来", artist: "（1998）" }, "2(-2)": { title: "Printemps", artist: "（1998）" }, "2(-1)": { title: "陪你倒数", artist: "（1999）" }, "2(0)": { title: "大热", artist: "（2000）" }, "2(1)": { title: "untitled", artist: "（2000）" }, "2(2)": { title: "forever", artist: "（2001）" }, "2(3)": { title: "crossover", artist: "（2002）" }, "2(4)": { title: "一切随风", artist: "（2003）" },
-            "3(-7)": { title: "爱上一个不回家的人", artist: "（1990）" }, "3(-6)": { title: "倾斜城市烧烧烧", artist: "（1990）" }, "3(-5)": { title: "open up", artist: "（1995）" }, "3(-4)": { title: "爱是唯一", artist: "（1996）" }, "3(-3)": { title: "夜太黑", artist: "（1996）" }, "3(-2)": { title: "美妙世界", artist: "（1997）" }, "3(-1)": { title: "铿锵玫瑰", artist: "（1999）" }, "3(0)": { title: "林忆莲' s", artist: "（2000）" }, "3(1)": { title: "原来…", artist: "（2001）" }, "3(2)": { title: "2001莲", artist: "（2001）" }, "3(3)": { title: "Encore", artist: "（2002）" }, "3(4)": { title: "本色", artist: "（2005）" },
-            "4(-6)": { title: "情敌贝多芬", artist: "（1995）" }, "4(-5)": { title: "如果你听见我的歌", artist: "（1996）" }, "4(-4)": { title: "好想你", artist: "（1996）" }, "4(-3)": { title: "白纸", artist: "（1997）" }, "4(-2)": { title: "公转自转", artist: "（1998）" }, "4(-1)": { title: "不可能错过你", artist: "（1999）" }, "4(0)": { title: "永远的第一天", artist: "（2000）" }, "4(1)": { title: "唯一", artist: "（2001）" }, "4(2)": { title: "不可思议", artist: "（2003）" }, "4(3)": { title: "心中的日月", artist: "（2004）" },
-            "5(-1)": { title: "David Tao", artist: "（1997）" }, "5(0)": { title: "I'm OK", artist: "（1999）" }, "5(1)": { title: "黑色柳丁", artist: "（2002）" }, "5(2)": { title: "太平盛世", artist: "（2005）" }, "5(3)": { title: "太美丽", artist: "（2006）" }, "5(4)": { title: "69乐章", artist: "（2009）" },
-            "6(-7)": { title: "梦想", artist: "（1996）" }, "6(-6)": { title: "思念", artist: "（1996）" }, "6(-5)": { title: "挚爱", artist: "（1997）" }, "6(-4)": { title: "直觉", artist: "（1997）" }, "6(-3)": { title: "选哲", artist: "（1998）" }, "6(-2)": { title: "到处留情", artist: "（1998）" }, "6(-1)": { title: "回来", artist: "（1999）" }, "6(0)": { title: "信仰", artist: "（2000）" }, "6(1)": { title: "我好想", artist: "（2001）" }, "6(2)": { title: "从开始到现在", artist: "（2002）" }, "6(3)": { title: "下一个永远", artist: "（2004）" },
-            "7(-3)": { title: "我们都是伤心人", artist: "（1993）" }, "7(-2)": { title: "生生世世", artist: "（1995）" }, "7(-1)": { title: "认识孙楠", artist: "（1997）" }, "7(0)": { title: "南极光", artist: "（1999）" }, "7(1)": { title: "楠得精选", artist: "（2001）" }, "7(2)": { title: "缘分的天空", artist: "（2002）" }, "7(3)": { title: "第一楠主角", artist: "（2003）" }, "7(4)": { title: "燃烧", artist: "（2004）" }, "7(5)": { title: "忘不了你", artist: "（2005）" },
-            "8(-4)": { title: "为你朝思暮想", artist: "（1994）" }, "8(-3)": { title: "白天不懂夜的黑", artist: "（1995）" }, "8(-2)": { title: "征服", artist: "（1998）" }, "8(-1)": { title: "干脆", artist: "（1999）" }, "8(0)": { title: "心酸的浪漫", artist: "（1999）" }, "8(1)": { title: "我不是天使", artist: "（2001）" }, "8(2)": { title: "如今", artist: "（2002）" }, "8(3)": { title: "那英全经典演唱会", artist: "（2002）" },
-            "9(-6)": { title: "生·生活", artist: "（1996）" }, "9(-5)": { title: "光阴似健", artist: "（1997）" }, "9(-4)": { title: "世界由你我开始", artist: "（1997）" }, "9(-3)": { title: "有故事的人", artist: "（1998）" }, "9(-2)": { title: "听健", artist: "（1998）" }, "9(-1)": { title: "至爱吾爱", artist: "（1999）" }, "9(0)": { title: "NOW 现在", artist: "（1999）" }, "9(1)": { title: "忘忧草", artist: "（2001）" }, "9(2)": { title: "遇见华健的感动", artist: "（2002）" }, "9(3)": { title: "My Favourite Songs", artist: "（2002）" }, "9(4)": { title: "爱上原味", artist: "（2002）" }, "9(5)": { title: "一起吃苦的幸福", artist: "（2003）" },
-            "10(-4)": { title: "全身莫文蔚", artist: "（1996）" }, "10(-3)": { title: "做自己", artist: "（1997）" }, "10(-2)": { title: "我要说", artist: "（1998）" }, "10(-1)": { title: "你可以", artist: "（1999）" }, "10(0)": { title: "就是莫文蔚", artist: "（1999）" }, "10(1)": { title: "Karen More", artist: "（1999）" }, "10(2)": { title: "再生", artist: "（2000）" }, "10(3)": { title: "十二楼的莫文蔚", artist: "（2000）" }, "10(4)": { title: "一朵金花", artist: "（2001）" }, "10(5)": { title: "恋上莫文蔚", artist: "（2002）" },
-            "11(-2)": { title: "赤裸裸", artist: "（1994）" }, "11(-1)": { title: "第三只眼", artist: "（1997）" }, "11(0)": { title: "怒放", artist: "（1999）" }, "11(1)": { title: "郑钧＝zj", artist: "（2001）" }, "11(2)": { title: "戈们的生活充满阳光", artist: "（2003）" }, "11(3)": { title: "长安长安", artist: "（2007）" },
-            "12(0)": { title: "我去2000年", artist: "（1999）" }, "12(1)": { title: "生如夏花", artist: "（2003）" },
-            "13(-1)": { title: "第一张创作专辑", artist: "（1999）" }, "13(0)": { title: "爱情万岁", artist: "（2000）" }, "13(1)": { title: "人生海海", artist: "（2001）" }, "13(2)": { title: "时光机", artist: "（2003）" }, "13(3)": { title: "神的孩子都在跳舞", artist: "（2004）" }, "13(4)": { title: "为爱而生", artist: "（2006）" }, "13(5)": { title: "后青春期的诗", artist: "（2008）" },
-            "14(-7)": { title: "狼来了", artist: "（1996）" }, "14(-6)": { title: "直觉", artist: "（1997）" }, "14(-5)": { title: "私日记", artist: "（1997）" }, "14(-4)": { title: "到此一游", artist: "（1998）" }, "14(-3)": { title: "体验入学", artist: "（1998）" }, "14(-2)": { title: "夏天的故事", artist: "（1999）" }, "14(-1)": { title: "微笑", artist: "（1999）" }, "14(0)": { title: "冬天的故事", artist: "（1999）" }, "14(1)": { title: "Play It Loud,Kiss Me Soft", artist: "（2000）" }, "14(2)": { title: "Miriam", artist: "（2001）" }, "14(3)": { title: "MvsM上半场", artist: "（2002）" }, "14(4)": { title: "MvsM 下半场", artist: "（2002）" },
-            "15(-7)": { title: "小魔女的魔法书", artist: "（1996）" }, "15(-6)": { title: "冰淇淋的祈祷", artist: "（1996）" }, "15(-5)": { title: "好想谈恋爱", artist: "（1996）" }, "15(-4)": { title: "小魔女变身舞曲 第1变舞法无天", artist: "（1997）" }, "15(-3)": { title: "小魔女魔法书 第2 辑魔登家庭", artist: "（1997）" }, "15(-2)": { title: "圣诞快乐 SONG", artist: "（1997）" }, "15(-1)": { title: "我要我们在一起", artist: "（1999）" }, "15(0)": { title: "绝世名伶", artist: "（1999）" }, "15(1)": { title: "星星", artist: "（2001）" }, "15(2)": { title: "我要我们的范晓萱", artist: "（2004）" },
-            "16(-4)": { title: "少女小渔刘若英的美丽与哀愁", artist: "（1995）" }, "16(-3)": { title: "雨季", artist: "（1995）" }, "16(-2)": { title: "到处乱走", artist: "（1996）" }, "16(-1)": { title: "很爱很爱你", artist: "（1998）" }, "16(0)": { title: "我等你", artist: "（2000）" }, "16(1)": { title: "年华", artist: "（2001）" }, "16(2)": { title: "Love and theCity", artist: "（2002）" }, "16(3)": { title: "我的失败与伟大", artist: "（2003）" }, "16(4)": { title: "听说？", artist: "（2004）" }, "16(5)": { title: "一整夜", artist: "（2005）" },
-            "17(-5)": { title: "消息", artist: "（1996）" }, "17(-4)": { title: "整个八月", artist: "（1997）" }, "17(-3)": { title: "温古知新·一个人的天荒地老", artist: "（1997）" }, "17(-2)": { title: "单恋", artist: "（1998）" }, "17(-1)": { title: "月亮太阳", artist: "（1998）" }, "17(0)": { title: "雨一直下", artist: "（1999）" }, "17(1)": { title: "奇迹创世纪精选", artist: "（2000）" }, "17(2)": { title: "替身", artist: "（2001）" }, "17(3)": { title: "大丈夫", artist: "（2003）" }, "17(4)": { title: "不甘寂寞", artist: "（2004）" },
-            "18(-1)": { title: "让我想一想", artist: "（1998）" }, "18(0)": { title: "还是会寂寞", artist: "（2000）" }, "18(1)": { title: "Groupies 吉他手", artist: "（2002）" }, "18(2)": { title: "After 17", artist: "（2004）" }, "18(3)": { title: "华丽的冒险", artist: "（2005）" },
-            "19(-5)": { title: "寻最", artist: "（1996）" }, "19(-4)": { title: "情牢", artist: "（1997）" }, "19(-3)": { title: "在克勤身边", artist: "（1997）" }, "19(-2)": { title: "98新曲+精选", artist: "（1998）" }, "19(-1)": { title: "一年半载", artist: "（1999）" }, "19(0)": { title: "再一次想你", artist: "（2000）" }, "19(1)": { title: "飞花", artist: "（2001）" }, "19(2)": { title: "李克勤大乐队", artist: "（2002）" }, "19(3)": { title: "Let's Celebrate", artist: "（2002）" }, "19(4)": { title: "Ever Last", artist: "（2002）" },
-            "20(-5)": { title: "依靠", artist: "（1997）" }, "20(-4)": { title: "心太软", artist: "（1997）" }, "20(-3)": { title: "很受伤", artist: "（1997）" }, "20(-2)": { title: "爱像太平洋", artist: "（1998）" }, "20(-1)": { title: "认真精选辑", artist: "（1999）" }, "20(0)": { title: "为爱走天涯", artist: "（2000）" }, "20(1)": { title: "天使兄弟小白脸", artist: "（2000）" }, "20(2)": { title: "飞鸟", artist: "（2000）" }, "20(3)": { title: "一个任贤齐", artist: "（2002）" },
-            "21(0)": { title: "Jay", artist: "（2000）" }, "21(1)": { title: "范特西", artist: "（2001）" }, "21(2)": { title: "八度空间", artist: "（2002）" }, "21(3)": { title: "叶惠美", artist: "（2003）" }, "21(4)": { title: "七里香", artist: "（2004）" }, "21(5)": { title: "11月的萧邦", artist: "（2005）" }, "21(6)": { title: "依然范特西", artist: "（2006）" }, "21(7)": { title: "我很忙", artist: "（2007）" },
-            "22(-1)": { title: "Jolin1019", artist: "（1999）" }, "22(0)": { title: "Don't Stop", artist: "（2000）" }, "22(1)": { title: "Show Your Love", artist: "（2000）" }, "22(2)": { title: "Lucky Number", artist: "（2001）" }, "22(3)": { title: "看我 72变", artist: "（2003）" }, "22(4)": { title: "城堡", artist: "（2004）" }, "22(5)": { title: "J-Game", artist: "（2005）" }, "22(6)": { title: "特务J", artist: "（2006）" },
-            "23(-6)": { title: "爱自己", artist: "（1996）" }, "23(-5)": { title: "短发", artist: "（1997）" }, "23(-4)": { title: "新居", artist: "（1997）" }, "23(-3)": { title: "洗脸", artist: "（1997）" }, "23(-2)": { title: "新鲜", artist: "（1999）" }, "23(-1)": { title: "I'll Be Loving You", artist: "（1999）" }, "23(0)": { title: "最爱", artist: "（2000）" }, "23(1)": { title: "Kiss", artist: "（2000）" }, "23(2)": { title: "花火", artist: "（2000）" }, "23(3)": { title: "Amour", artist: "（2001）" }, "23(4)": { title: "Suddenly, this summer", artist: "（2001）" },
-            "24(-4)": { title: "就是喜欢你", artist: "（1993）" }, "24(-3)": { title: "花开了没有", artist: "（1994）" }, "24(-2)": { title: "这个下午很无聊", artist: "（1997）" }, "24(-1)": { title: "秘密基地", artist: "（1998）" }, "24(0)": { title: "有问题", artist: "（2000）" }, "24(1)": { title: "Orange 2", artist: "（2001）" }, "24(2)": { title: "等我有一天", artist: "（2002）" },
-            "25(0)": { title: "幸福的旁边", artist: "（1999）" }, "25(1)": { title: "草莓声明", artist: "（2001）" }, "25(2)": { title: "我是你的罗密欧", artist: "（2004）" }, "25(3)": { title: "花季王朝", artist: "（2005）" }, "25(4)": { title: "花天囍世", artist: "（2005）" }, "25(5)": { title: "花龄盛会", artist: "（2007）" },
-            "26(-5)": { title: "姐妹", artist: "（1996）" }, "26(-4)": { title: "BAD BOY", artist: "（1997）" }, "26(-3)": { title: "妹力四射", artist: "（1997）" }, "26(-2)": { title: "牵手", artist: "（1998）" }, "26(-1)": { title: "我可以抱你吗？爱人", artist: "（1999）" }, "26(0)": { title: "歌声妹影", artist: "（2000）" }, "26(1)": { title: "不顾一切", artist: "（2000）" }, "26(2)": { title: "旅程", artist: "（2000）" }, "26(3)": { title: "真实", artist: "（2001）" }, "26(4)": { title: "发烧", artist: "（2002）" },
-            "27(-3)": { title: "浪人情歌", artist: "（1994）" }, "27(-2)": { title: "爱情的尽头", artist: "（1996）" }, "27(-1)": { title: "树枝孤鸟", artist: "（1998）" }, "27(0)": { title: "白鸽", artist: "（1999）" }, "27(1)": { title: "梦的河流", artist: "（2001）" }, "27(2)": { title: "泪桥", artist: "（2003）" }, "27(3)": { title: "双面人", artist: "（2005）" }, "27(4)": { title: "快乐练习曲", artist: "（2006）" },
-            "28(-1)": { title: "一夜长大", artist: "（1999）" }, "28(0)": { title: "勇气", artist: "（2000）" }, "28(1)": { title: "闪亮的星", artist: "（2001）" }, "28(2)": { title: "Sunrise 我喜欢", artist: "（2002）" }, "28(3)": { title: "美丽人生", artist: "（2003）" }, "28(4)": { title: "燕尾蝶", artist: "（2004）" }, "28(5)": { title: "丝路", artist: "（2005）" }, "28(6)": { title: "亲亲", artist: "（2006）" },
-            "29(-1)": { title: "新裤子", artist: "（1999）" }, "29(0)": { title: "Disco Girl", artist: "（2000）" }, "29(1)": { title: "我们是自动的", artist: "（2002）" }, "29(2)": { title: "龙虎人丹", artist: "（2006）" },
-            "30(0)": { title: "孙燕姿", artist: "（2000）" }, "30(1)": { title: "我要的幸福", artist: "（2000）" }, "30(2)": { title: "风筝", artist: "（2001）" }, "30(3)": { title: "Leave", artist: "（2002）" }, "30(4)": { title: "未完成", artist: "（2003）" }, "30(5)": { title: "The Moment", artist: "（2003）" }, "30(6)": { title: "完美的一天", artist: "（2005）" }, "30(7)": { title: "逆光", artist: "（2007）" }
+        let db = null;
+        let auth = null;
+        let isOfflineMode = false;
+
+        // 12 Colors Palette (Pink/Purple/Pastel)
+        const PARTICLE_COLORS = [
+            '#FFDDE1', // Pastel Pink
+            '#FBD0D5', // Light Rose
+            '#F8C3C9', // Soft Pink
+            '#F4B6BE', // Cherry Blossom
+            '#F1A9B2', // Flamingo
+            '#EE9CA7', // Salmon Pink
+            '#F6F3FF', // Pale Lavender
+            '#E5DEF5', // Light Lilac
+            '#D4C9EC', // Thistle
+            '#C3B5E3', // Wisteria
+            '#B2A0DA', // Soft Purple
+            '#A18CD1'  // Lavender
+        ];
+
+        window.userSystem = {
+            isLoggedIn: false, username: null, resonatedList: [], userColor: '#ffffff',
+            init: function() {
+                if (firebaseConfig) {
+                    const app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app);
+                    signInAnonymously(auth).then(() => { this.enableButtons(); }).catch(() => this.activateOffline());
+                } else this.activateOffline();
+                setTimeout(() => { if (!db && !isOfflineMode) this.activateOffline(); }, 3000);
+            },
+            activateOffline: function() { isOfflineMode = true; this.enableButtons(); },
+            enableButtons: function() {
+                const bL = document.getElementById('btn-login'), bR = document.getElementById('btn-register');
+                if(bL) { bL.disabled = false; bL.textContent = "LOGIN"; }
+                if(bR) { bR.disabled = false; bR.textContent = "REGISTER"; }
+            },
+            register: async function(u, p) {
+                const msg = document.getElementById('reg-msg-area'); msg.textContent = "Processing...";
+                const defColor = PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)];
+                if (isOfflineMode) {
+                    let localDB = JSON.parse(localStorage.getItem('mobius_users') || '{}');
+                    if (localDB[u]) { msg.textContent = "Username taken."; return; }
+                    localDB[u] = { password: p, resonated: [], color: defColor };
+                    localStorage.setItem('mobius_users', JSON.stringify(localDB));
+                    alert("Registered!"); uiManager.switchModal('login'); return;
+                }
+                try {
+                    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'user_accounts', u);
+                    if ((await getDoc(ref)).exists()) { msg.textContent = "Username exists."; return; }
+                    await setDoc(ref, { password: p, resonated: [], color: defColor });
+                    alert("Registered!"); uiManager.switchModal('login');
+                } catch (e) { msg.textContent = "Error: " + e.message; }
+            },
+            login: async function(u, p) {
+                const msg = document.getElementById('login-msg-area'); msg.textContent = "Verifying...";
+                let userData = null;
+                if (isOfflineMode) { userData = JSON.parse(localStorage.getItem('mobius_users') || '{}')[u]; }
+                else {
+                    try {
+                        const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'user_accounts', u));
+                        if (snap.exists()) userData = snap.data();
+                    } catch (e) { msg.textContent = "Network Error"; return; }
+                }
+                if (userData && userData.password === p) {
+                    this.isLoggedIn = true; this.username = u; 
+                    this.resonatedList = userData.resonated || [];
+                    this.userColor = userData.color || PARTICLE_COLORS[0];
+                    this.onLoginSuccess();
+                } else msg.textContent = "Invalid Credentials";
+            },
+            logout: function() { 
+                this.isLoggedIn = false; 
+                this.username = null; 
+                this.resonatedList = []; 
+                uiManager.closeOverlay(); 
+                document.getElementById('login-hint').style.display = 'block'; 
+                alert("Logged Out"); 
+            },
+            onLoginSuccess: function() { 
+                uiManager.closeOverlay(); 
+                uiManager.initColorPicker();
+                uiManager.updateProfileUI(); 
+                this.syncVisuals();
+                document.getElementById('login-hint').style.display = 'none'; 
+                alert("Welcome " + this.username); 
+            },
+            // Sync user data to local storage/db
+            saveData: async function() {
+                if (isOfflineMode) {
+                    let localDB = JSON.parse(localStorage.getItem('mobius_users') || '{}');
+                    if (localDB[this.username]) {
+                        localDB[this.username].resonated = this.resonatedList;
+                        localDB[this.username].color = this.userColor;
+                        localStorage.setItem('mobius_users', JSON.stringify(localDB));
+                    }
+                } else {
+                    try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'user_accounts', this.username), { resonated: this.resonatedList, color: this.userColor }, { merge: true }); } catch(e) {}
+                }
+            },
+            addResonance: function(title, artist) {
+                if (!this.isLoggedIn) return false;
+                let item = this.resonatedList.find(i => i.album === title);
+                if (!item) {
+                    item = { album: title, artist: artist, count: 0 };
+                    this.resonatedList.push(item);
+                }
+                if (item.count < 5) {
+                    item.count++;
+                    this.saveData();
+                    this.syncVisuals();
+                    uiManager.updateProfileUI();
+                    return true;
+                }
+                return false;
+            },
+            updateResonanceCount: function(title, delta) {
+                let item = this.resonatedList.find(i => i.album === title);
+                if (item) {
+                    const newCount = item.count + delta;
+                    if (newCount >= 0 && newCount <= 5) {
+                        item.count = newCount;
+                        if (item.count === 0) {
+                            this.resonatedList = this.resonatedList.filter(i => i.album !== title);
+                        }
+                        this.saveData();
+                        this.syncVisuals();
+                        uiManager.updateProfileUI();
+                    }
+                }
+            },
+            deleteResonance: function(title) {
+                this.resonatedList = this.resonatedList.filter(i => i.album !== title);
+                this.saveData();
+                this.syncVisuals();
+                uiManager.updateProfileUI();
+            },
+            setColor: function(color) {
+                this.userColor = color;
+                this.saveData();
+                this.syncVisuals(); // Update all particle colors immediately
+                uiManager.updateProfileUI();
+            },
+            // Sync logic to update 3D scene based on user data
+            syncVisuals: function() {
+                if (!this.isLoggedIn) return;
+                // Update 3D scene
+                const albums = window.albums || []; // Global ref
+                albums.forEach(g => {
+                    const title = g.userData.labelText;
+                    const item = this.resonatedList.find(i => i.album === title);
+                    const count = item ? item.count : 0;
+                    
+                    // Sync local clicks
+                    g.userData.localClicks = count;
+                    
+                    // Sync particles count
+                    let pCount = 0;
+                    if (count > 0) {
+                        pCount = 200 * Math.pow(2, count - 1); // Using REVISED formula logic: Base * 2^(n-1) approx to multiplier logic
+                        // Actually use exact logic: base, base*2, base*4... based on prompt "multiplier = 2"
+                        // Or simple iterative logic
+                        pCount = 200; 
+                        for(let k=1; k<count; k++) pCount = Math.floor(pCount * 2);
+                    }
+                    
+                    g.userData.currentParticleCount = pCount;
+                    if (pCount > 0) {
+                        updateResonanceGeometry(g.userData.resonanceParticles, pCount);
+                        g.userData.resonanceParticles.visible = true;
+                        g.userData.resonanceParticles.material.color.set(this.userColor);
+                    } else {
+                        g.userData.resonanceParticles.visible = false;
+                    }
+                });
+            }
         };
+        window.userSystem.init();
+
+        // Expose PARTICLE_COLORS for UI
+        window.PARTICLE_COLORS = PARTICLE_COLORS;
+    </script>
+
+    <script>
+        const uiManager = {
+            overlay: document.getElementById('overlay-container'),
+            modals: { login: document.getElementById('modal-login'), register: document.getElementById('modal-register'), profile: document.getElementById('modal-profile') },
+            openOverlay: function() { this.overlay.classList.add('active'); this.switchModal(window.userSystem.isLoggedIn ? 'profile' : 'login'); },
+            closeOverlay: function() { 
+                const overlay = this.overlay;
+                const activeModal = this.overlay.querySelector('.modal-box.active');
+                if(activeModal) {
+                    activeModal.classList.add('closing');
+                    setTimeout(() => {
+                        activeModal.classList.remove('closing');
+                        overlay.classList.remove('active');
+                    }, 300); // Match animation duration
+                } else {
+                    overlay.classList.remove('active');
+                }
+            },
+            switchModal: function(name) { Object.values(this.modals).forEach(el => el.classList.remove('active')); if (this.modals[name]) this.modals[name].classList.add('active'); },
+            initColorPicker: function() {
+                const container = document.getElementById('color-picker');
+                container.innerHTML = '';
+                window.PARTICLE_COLORS.forEach(c => {
+                    const div = document.createElement('div');
+                    div.className = 'color-swatch';
+                    div.style.backgroundColor = c;
+                    div.onclick = () => window.userSystem.setColor(c);
+                    container.appendChild(div);
+                });
+            },
+            updateProfileUI: function() {
+                document.getElementById('profile-id').textContent = window.userSystem.username;
+                
+                // Color selection visual
+                const swatches = document.querySelectorAll('.color-swatch');
+                swatches.forEach(s => {
+                    if (rgbToHex(s.style.backgroundColor).toUpperCase() === window.userSystem.userColor.toUpperCase()) s.classList.add('selected');
+                    else s.classList.remove('selected');
+                });
+                
+                // List
+                const list = window.userSystem.resonatedList;
+                document.getElementById('resonance-list').innerHTML = list.length === 0 ? 
+                    '<div style="padding:10px; color:#666; text-align:center;">No resonance data yet.</div>' : 
+                    list.map(item => {
+                        // Find the real title from albumData using the ID key
+                        const info = albumData[item.album] || { title: item.album, artist: item.artist };
+                        return `
+                        <div class="resonance-item">
+                            <div class="info"><strong>${info.title}</strong><span>${item.artist}</span></div>
+                            <div class="resonance-controls">
+                                <button class="ctrl-btn" onclick="window.userSystem.updateResonanceCount('${item.album}', -1)">-</button>
+                                <span style="font-size:12px; min-width:20px; text-align:center;">${item.count}</span>
+                                <button class="ctrl-btn" onclick="window.userSystem.updateResonanceCount('${item.album}', 1)">+</button>
+                                <button class="ctrl-btn del-btn" onclick="window.userSystem.deleteResonance('${item.album}')">×</button>
+                            </div>
+                        </div>
+                    `}).join('');
+            }
+        };
+
+        // Helper
+        function rgbToHex(rgb) {
+            if (rgb.startsWith('#')) return rgb;
+            const sep = rgb.indexOf(",") > -1 ? "," : " ";
+            const rgbArr = rgb.substr(4).split(")")[0].split(sep);
+            let r = (+rgbArr[0]).toString(16), g = (+rgbArr[1]).toString(16), b = (+rgbArr[2]).toString(16);
+            if (r.length == 1) r = "0" + r; if (g.length == 1) g = "0" + g; if (b.length == 1) b = "0" + b;
+            return "#" + r + g + b;
+        }
+
+        // Close overlay when clicking background
+        document.getElementById('overlay-container').onclick = (e) => {
+            if (e.target === e.currentTarget) {
+                uiManager.closeOverlay();
+            }
+        };
+
+        document.getElementById('user-icon-btn').onclick = () => uiManager.openOverlay();
+        // document.getElementById('btn-close-overlay').onclick = () => uiManager.closeOverlay(); // Removed
+        document.getElementById('btn-login').onclick = () => { const u = document.getElementById('login-username').value; const p = document.getElementById('login-password').value; if(u && p) window.userSystem.login(u, p); };
+        document.getElementById('btn-register').onclick = () => {
+            const u = document.getElementById('reg-username').value.trim(); const p = document.getElementById('reg-password').value; const pc = document.getElementById('reg-confirm').value;
+            if (!/^[\u4e00-\u9fa5a-zA-Z_]+$/.test(u)) { alert("Invalid format"); return; }
+            if (p !== pc || p.length < 1) { alert("Check password"); return; }
+            window.userSystem.register(u, p);
+        };
+        document.getElementById('btn-logout').onclick = () => window.userSystem.logout();
+
+        const USE_LOCAL_ASSETS = true; // CHANGED FOR LOCAL
+        
+        // Use placeholder data URI for intro to prevent 404s in preview
+        const placeholderRadio = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+        const INTRO_RADIO_PATH = 'assets/intro_radio.png'; 
+        const INTRO_TITLE_PATH = 'assets/intro_title.png'; 
+
+        // ================= 配置调整区域 =================
+        // 修改以下数值即可调整开屏图片的位置和缩放
+        const RADIO_SCALE = 1.0;  // 收音机缩放倍数
+        const RADIO_Y = -10;      // 收音机垂直位置
+        const TITLE_SCALE = 0.6;  // 标题缩放倍数
+        const TITLE_Y = 5;        // 标题垂直位置
+        const TITLE_Z = 0.1;      // 标题前后深度
+        
+        // 【共鸣粒子参数】(RESONANCE PARTICLES)
+        const RESONANCE_MAX_CLICKS = 5;       // 每个用户最大共鸣次数
+        const RESONANCE_MULTIPLIER = 2;       // 每次共鸣粒子增加的倍数
+        const RESONANCE_BASE_COUNT = 200;     // 第一次点击产生的粒子基数
+        const RESONANCE_SPREAD = 15.0;        // 粒子扩散范围 (数值越小越集中在专辑附近)
+        const RESONANCE_MIN_RADIUS = 3.5;     // 新增：粒子生成的最小半径，避免遮挡卡片
+        // ===============================================
+
+        const albumData = { "1(-7)": { title: "迷", artist: "王菲" }, "1(-6)": { title: "天空", artist: "王菲" }, "1(-5)": { title: "菲靡靡之音", artist: "王菲" }, "1(-4)": { title: "浮躁", artist: "王菲" }, "1(-3)": { title: "王菲", artist: "王菲" }, "1(-2)": { title: "唱游", artist: "王菲" }, "1(-1)": { title: "只爱陌生人", artist: "王菲" }, "1(0)": { title: "寓言", artist: "王菲" }, "1(1)": { title: "王菲", artist: "王菲" }, "1(2)": { title: "将爱", artist: "王菲" }, "2(-5)": { title: "宠爱", artist: "张国荣" }, "2(-4)": { title: "红", artist: "张国荣" }, "2(-3)": { title: "这些年来", artist: "张国荣" }, "2(-2)": { title: "Printemps", artist: "张国荣" }, "2(-1)": { title: "陪你倒数", artist: "张国荣" }, "2(0)": { title: "大热", artist: "张国荣" }, "2(1)": { title: "untitled", artist: "张国荣" }, "2(2)": { title: "forever", artist: "张国荣" }, "2(3)": { title: "crossover", artist: "张国荣" }, "2(4)": { title: "一切随风", artist: "张国荣" }, "3(-7)": { title: "爱上一个不回家的人", artist: "林忆莲" }, "3(-6)": { title: "倾斜城市", artist: "林忆莲" }, "3(-5)": { title: "open up", artist: "林忆莲" }, "3(-4)": { title: "爱是唯一", artist: "林忆莲" }, "3(-3)": { title: "夜太黑", artist: "林忆莲" }, "3(-2)": { title: "美妙世界", artist: "林忆莲" }, "3(-1)": { title: "铿锵玫瑰", artist: "林忆莲" }, "3(0)": { title: "林忆莲's", artist: "林忆莲" }, "3(1)": { title: "原来…", artist: "林忆莲" }, "3(2)": { title: "2001莲", artist: "林忆莲" }, "3(3)": { title: "Encore", artist: "林忆莲" }, "3(4)": { title: "本色", artist: "林忆莲" }, "4(-6)": { title: "情敌贝多芬", artist: "王力宏" }, "4(-5)": { title: "如果你听见我的歌", artist: "王力宏" }, "4(-4)": { title: "好想你", artist: "王力宏" }, "4(-3)": { title: "白纸", artist: "王力宏" }, "4(-2)": { title: "公转自转", artist: "王力宏" }, "4(-1)": { title: "不可能错过你", artist: "王力宏" }, "4(0)": { title: "永远的第一天", artist: "王力宏" }, "4(1)": { title: "唯一", artist: "王力宏" }, "4(2)": { title: "不可思议", artist: "王力宏" }, "4(3)": { title: "心中的日月", artist: "王力宏" }, "5(-1)": { title: "David Tao", artist: "陶喆" }, "5(0)": { title: "I'm OK", artist: "陶喆" }, "5(1)": { title: "黑色柳丁", artist: "陶喆" }, "5(2)": { title: "太平盛世", artist: "陶喆" }, "5(3)": { title: "太美丽", artist: "陶喆" }, "5(4)": { title: "69乐章", artist: "陶喆" }, "6(-7)": { title: "梦想", artist: "张信哲" }, "6(-6)": { title: "思念", artist: "张信哲" }, "6(-5)": { title: "挚爱", artist: "张信哲" }, "6(-4)": { title: "直觉", artist: "张信哲" }, "6(-3)": { title: "选哲", artist: "张信哲" }, "6(-2)": { title: "到处留情", artist: "张信哲" }, "6(-1)": { title: "回来", artist: "张信哲" }, "6(0)": { title: "信仰", artist: "张信哲" }, "6(1)": { title: "我好想", artist: "张信哲" }, "6(2)": { title: "从开始到现在", artist: "张信哲" }, "6(3)": { title: "下一个永远", artist: "张信哲" }, "7(-3)": { title: "我们都是伤心人", artist: "孙楠" }, "7(-2)": { title: "生生世世", artist: "孙楠" }, "7(-1)": { title: "认识孙楠", artist: "孙楠" }, "7(0)": { title: "南极光", artist: "孙楠" }, "7(1)": { title: "楠得精选", artist: "孙楠" }, "7(2)": { title: "缘分的天空", artist: "孙楠" }, "7(3)": { title: "第一楠主角", artist: "孙楠" }, "7(4)": { title: "燃烧", artist: "孙楠" }, "7(5)": { title: "忘不了你", artist: "孙楠" }, "8(-4)": { title: "为你朝思暮想", artist: "那英" }, "8(-3)": { title: "白天不懂夜的黑", artist: "那英" }, "8(-2)": { title: "征服", artist: "那英" }, "8(-1)": { title: "干脆", artist: "那英" }, "8(0)": { title: "心酸的浪漫", artist: "那英" }, "8(1)": { title: "我不是天使", artist: "那英" }, "8(2)": { title: "如今", artist: "那英" }, "8(3)": { title: "那英全经典演唱会", artist: "那英" }, "9(-6)": { title: "生·生活", artist: "周华健" }, "9(-5)": { title: "光阴似健", artist: "周华健" }, "9(-4)": { title: "世界由你我开始", artist: "周华健" }, "9(-3)": { title: "有故事的人", artist: "周华健" }, "9(-2)": { title: "听健", artist: "周华健" }, "9(-1)": { title: "至爱吾爱", artist: "周华健" }, "9(0)": { title: "NOW 现在", artist: "周华健" }, "9(1)": { title: "忘忧草", artist: "周华健" }, "9(2)": { title: "遇见华健的感动", artist: "周华健" }, "9(3)": { title: "My Favourite Songs", artist: "周华健" }, "9(4)": { title: "爱上原味", artist: "周华健" }, "9(5)": { title: "一起吃苦的幸福", artist: "周华健" }, "10(-4)": { title: "全身莫文蔚", artist: "莫文蔚" }, "10(-3)": { title: "做自己", artist: "莫文蔚" }, "10(-2)": { title: "我要说", artist: "莫文蔚" }, "10(-1)": { title: "你可以", artist: "莫文蔚" }, "10(0)": { title: "就是莫文蔚", artist: "莫文蔚" }, "10(1)": { title: "Karen More", artist: "莫文蔚" }, "10(2)": { title: "再生", artist: "莫文蔚" }, "10(3)": { title: "十二楼的莫文蔚", artist: "莫文蔚" }, "10(4)": { title: "一朵金花", artist: "莫文蔚" }, "10(5)": { title: "恋上莫文蔚", artist: "莫文蔚" }, "11(-2)": { title: "赤裸裸", artist: "郑钧" }, "11(-1)": { title: "第三只眼", artist: "郑钧" }, "11(0)": { title: "怒放", artist: "郑钧" }, "11(1)": { title: "郑钧＝zj", artist: "郑钧" }, "11(2)": { title: "戈们的生活充满阳光", artist: "郑钧" }, "11(3)": { title: "长安长安", artist: "郑钧" }, "12(0)": { title: "我去2000年", artist: "朴树" }, "12(1)": { title: "生如夏花", artist: "朴树" }, "13(-1)": { title: "第一张创作专辑", artist: "五月天" }, "13(0)": { title: "爱情万岁", artist: "五月天" }, "13(1)": { title: "人生海海", artist: "五月天" }, "13(2)": { title: "时光机", artist: "五月天" }, "13(3)": { title: "神的孩子都在跳舞", artist: "五月天" }, "13(4)": { title: "为爱而生", artist: "五月天" }, "13(5)": { title: "后青春期的诗", artist: "五月天" }, "14(-7)": { title: "狼来了", artist: "杨千嬅" }, "14(-6)": { title: "直觉", artist: "杨千嬅" }, "14(-5)": { title: "私日记", artist: "杨千嬅" }, "14(-4)": { title: "到此一游", artist: "杨千嬅" }, "14(-3)": { title: "体验入学", artist: "杨千嬅" }, "14(-2)": { title: "夏天的故事", artist: "杨千嬅" }, "14(-1)": { title: "微笑", artist: "杨千嬅" }, "14(0)": { title: "冬天的故事", artist: "杨千嬅" }, "14(1)": { title: "Play It Loud", artist: "杨千嬅" }, "14(2)": { title: "Miriam", artist: "杨千嬅" }, "14(3)": { title: "MvsM上半场", artist: "杨千嬅" }, "14(4)": { title: "MvsM 下半场", artist: "杨千嬅" }, "15(-7)": { title: "小魔女的魔法书", artist: "范晓萱" }, "15(-6)": { title: "冰淇淋的祈祷", artist: "范晓萱" }, "15(-5)": { title: "好想谈恋爱", artist: "范晓萱" }, "15(-4)": { title: "小魔女变身舞曲", artist: "范晓萱" }, "15(-3)": { title: "小魔女魔法书2", artist: "范晓萱" }, "15(-2)": { title: "圣诞快乐SONG", artist: "范晓萱" }, "15(-1)": { title: "我要我们在一起", artist: "范晓萱" }, "15(0)": { title: "绝世名伶", artist: "范晓萱" }, "15(1)": { title: "星星", artist: "范晓萱" }, "15(2)": { title: "我要我们的范晓萱", artist: "范晓萱" }, "16(-4)": { title: "少女小渔", artist: "刘若英" }, "16(-3)": { title: "雨季", artist: "刘若英" }, "16(-2)": { title: "到处乱走", artist: "刘若英" }, "16(-1)": { title: "很爱很爱你", artist: "刘若英" }, "16(0)": { title: "我等你", artist: "刘若英" }, "16(1)": { title: "年华", artist: "刘若英" }, "16(2)": { title: "Love and theCity", artist: "刘若英" }, "16(3)": { title: "我的失败与伟大", artist: "刘若英" }, "16(4)": { title: "听说？", artist: "刘若英" }, "16(5)": { title: "一整夜", artist: "刘若英" }, "17(-5)": { title: "消息", artist: "张宇" }, "17(-4)": { title: "整个八月", artist: "张宇" }, "17(-3)": { title: "温古知新", artist: "张宇" }, "17(-2)": { title: "单恋", artist: "张宇" }, "17(-1)": { title: "月亮太阳", artist: "张宇" }, "17(0)": { title: "雨一直下", artist: "张宇" }, "17(1)": { title: "奇迹创世纪精选", artist: "张宇" }, "17(2)": { title: "替身", artist: "张宇" }, "17(3)": { title: "大丈夫", artist: "张宇" }, "17(4)": { title: "不甘寂寞", artist: "张宇" }, "18(-1)": { title: "让我想一想", artist: "陈绮贞" }, "18(0)": { title: "还是会寂寞", artist: "陈绮贞" }, "18(1)": { title: "吉他手", artist: "陈绮贞" }, "18(2)": { title: "After 17", artist: "陈绮贞" }, "18(3)": { title: "华丽的冒险", artist: "陈绮贞" }, "19(-5)": { title: "寻最", artist: "李克勤" }, "19(-4)": { title: "情牢", artist: "李克勤" }, "19(-3)": { title: "在克勤身边", artist: "李克勤" }, "19(-2)": { title: "98新曲+精选", artist: "李克勤" }, "19(-1)": { title: "一年半载", artist: "李克勤" }, "19(0)": { title: "再一次想你", artist: "李克勤" }, "19(1)": { title: "飞花", artist: "李克勤" }, "19(2)": { title: "大乐队", artist: "李克勤" }, "19(3)": { title: "Let's Celebrate", artist: "李克勤" }, "19(4)": { title: "Ever Last", artist: "李克勤" }, "20(-5)": { title: "依靠", artist: "任贤齐" }, "20(-4)": { title: "心太软", artist: "任贤齐" }, "20(-3)": { title: "很受伤", artist: "任贤齐" }, "20(-2)": { title: "爱像太平洋", artist: "任贤齐" }, "20(-1)": { title: "认真精选辑", artist: "任贤齐" }, "20(0)": { title: "为爱走天涯", artist: "任贤齐" }, "20(1)": { title: "天使兄弟小白脸", artist: "任贤齐" }, "20(2)": { title: "飞鸟", artist: "任贤齐" }, "20(3)": { title: "一个任贤齐", artist: "任贤齐" }, "21(0)": { title: "Jay", artist: "周杰伦" }, "21(1)": { title: "范特西", artist: "周杰伦" }, "21(2)": { title: "八度空间", artist: "周杰伦" }, "21(3)": { title: "叶惠美", artist: "周杰伦" }, "21(4)": { title: "七里香", artist: "周杰伦" }, "21(5)": { title: "11月的萧邦", artist: "周杰伦" }, "21(6)": { title: "依然范特西", artist: "周杰伦" }, "21(7)": { title: "我很忙", artist: "周杰伦" }, "22(-1)": { title: "Jolin1019", artist: "蔡依林" }, "22(0)": { title: "Don't Stop", artist: "蔡依林" }, "22(1)": { title: "Show Your Love", artist: "蔡依林" }, "22(2)": { title: "Lucky Number", artist: "蔡依林" }, "22(3)": { title: "看我 72变", artist: "蔡依林" }, "22(4)": { title: "城堡", artist: "蔡依林" }, "22(5)": { title: "J-Game", artist: "蔡依林" }, "22(6)": { title: "特务J", artist: "蔡依林" }, "23(-6)": { title: "爱自己", artist: "梁咏琪" }, "23(-5)": { title: "短发", artist: "梁咏琪" }, "23(-4)": { title: "新居", artist: "梁咏琪" }, "23(-3)": { title: "洗脸", artist: "梁咏琪" }, "23(-2)": { title: "新鲜", artist: "梁咏琪" }, "23(-1)": { title: "I'll Be Loving You", artist: "梁咏琪" }, "23(0)": { title: "最爱", artist: "梁咏琪" }, "23(1)": { title: "Kiss", artist: "梁咏琪" }, "23(2)": { title: "花火", artist: "梁咏琪" }, "23(3)": { title: "Amour", artist: "梁咏琪" }, "23(4)": { title: "Suddenly", artist: "梁咏琪" }, "24(-4)": { title: "就是喜欢你", artist: "张震岳" }, "24(-3)": { title: "花开了没有", artist: "张震岳" }, "24(-2)": { title: "这个下午很无聊", artist: "张震岳" }, "24(-1)": { title: "秘密基地", artist: "张震岳" }, "24(0)": { title: "有问题", artist: "张震岳" }, "24(1)": { title: "Orange 2", artist: "张震岳" }, "24(2)": { title: "等我有一天", artist: "张震岳" }, "25(0)": { title: "幸福的旁边", artist: "花儿乐队" }, "25(1)": { title: "草莓声明", artist: "花儿乐队" }, "25(2)": { title: "我是你的罗密欧", artist: "花儿乐队" }, "25(3)": { title: "花季王朝", artist: "花儿乐队" }, "25(4)": { title: "花天囍世", artist: "花儿乐队" }, "25(5)": { title: "花龄盛会", artist: "花儿乐队" }, "26(-5)": { title: "姐妹", artist: "张惠妹" }, "26(-4)": { title: "BAD BOY", artist: "张惠妹" }, "26(-3)": { title: "妹力四射", artist: "张惠妹" }, "26(-2)": { title: "牵手", artist: "张惠妹" }, "26(-1)": { title: "我可以抱你吗", artist: "张惠妹" }, "26(0)": { title: "歌声妹影", artist: "张惠妹" }, "26(1)": { title: "不顾一切", artist: "张惠妹" }, "26(2)": { title: "旅程", artist: "张惠妹" }, "26(3)": { title: "真实", artist: "张惠妹" }, "26(4)": { title: "发烧", artist: "张惠妹" }, "27(-3)": { title: "浪人情歌", artist: "伍佰" }, "27(-2)": { title: "爱情的尽头", artist: "伍佰" }, "27(-1)": { title: "树枝孤鸟", artist: "伍佰" }, "27(0)": { title: "白鸽", artist: "伍佰" }, "27(1)": { title: "梦的河流", artist: "伍佰" }, "27(2)": { title: "泪桥", artist: "伍佰" }, "27(3)": { title: "双面人", artist: "伍佰" }, "27(4)": { title: "快乐练习曲", artist: "伍佰" }, "28(-1)": { title: "一夜长大", artist: "梁静茹" }, "28(0)": { title: "勇气", artist: "梁静茹" }, "28(1)": { title: "闪亮的星", artist: "梁静茹" }, "28(2)": { title: "Sunrise", artist: "梁静茹" }, "28(3)": { title: "美丽人生", artist: "梁静茹" }, "28(4)": { title: "燕尾蝶", artist: "梁静茹" }, "28(5)": { title: "丝路", artist: "梁静茹" }, "28(6)": { title: "亲亲", artist: "梁静茹" }, "29(-1)": { title: "新裤子", artist: "新裤子" }, "29(0)": { title: "Disco Girl", artist: "新裤子" }, "29(1)": { title: "我们是自动的", artist: "新裤子" }, "29(2)": { title: "龙虎人丹", artist: "新裤子" }, "30(0)": { title: "孙燕姿", artist: "孙燕姿" }, "30(1)": { title: "我要的幸福", artist: "孙燕姿" }, "30(2)": { title: "风筝", artist: "孙燕姿" }, "30(3)": { title: "Leave", artist: "孙燕姿" }, "30(4)": { title: "未完成", artist: "孙燕姿" }, "30(5)": { title: "The Moment", artist: "孙燕姿" }, "30(6)": { title: "完美的一天", artist: "孙燕姿" }, "30(7)": { title: "逆光", artist: "孙燕姿" } };
 
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x050505, 0.012);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        
         const DEFAULT_CAM_Z = 75;
         const DEFAULT_CAM_Y = -2;
         const MIN_ZOOM = 20; 
         const MAX_ZOOM = 120;
-        
         camera.position.z = DEFAULT_CAM_Z;
         camera.position.y = DEFAULT_CAM_Y;
 
@@ -377,875 +943,724 @@
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(renderer.domElement);
 
-        // --- 音频管理器 ---
-        const audioManager = {
-            current: null,
-            trackPlayBtn: document.getElementById('track-play-btn'),
-            iconPlay: document.getElementById('track-icon-play'),
-            iconPause: document.getElementById('track-icon-pause'),
-            
-            isPlaying: false,
+        // --- Intro Group ---
+        const introGroup = new THREE.Group();
+        scene.add(introGroup);
+        introGroup.position.y = RADIO_Y; 
 
-            init: function() {
-                 this.trackPlayBtn.addEventListener('click', (e) => {
-                     e.stopPropagation();
-                     if (this.isPlaying) {
-                         this.pause();
-                     } else {
-                         this.playCurrent();
-                     }
-                 });
-                 // 防止点击播放键穿透到场景
-                 this.trackPlayBtn.addEventListener('mousedown', e => e.stopPropagation());
-                 this.trackPlayBtn.addEventListener('touchstart', e => e.stopPropagation());
-            },
-
-            load: function(id) {
-                // 停止当前播放（如果正在播放）
-                this.stop();
-                
-                // 设置新音源路径，但不自动播放
-                const audioPath = `assets/12/12(01).mp3`; 
-                // 注意：这里暂时硬编码为用户指定的 12(01).mp3 用于演示
-                // 如果要通用化，应该基于 id 动态生成，例如: `assets/${id+1}/${id+1}(01).mp3`
-                
-                this.current = new Audio(audioPath);
-                this.current.volume = 0.6;
-                
-                // 错误处理
-                this.current.onerror = () => {
-                    console.log("Audio not found or error loading.");
-                    this.isPlaying = false;
-                    this.updateIcon();
-                };
-                
-                // 监听播放结束，重置图标
-                this.current.onended = () => {
-                    this.isPlaying = false;
-                    this.updateIcon();
-                };
-            },
-
-            playCurrent: function() {
-                if (this.current) {
-                    this.current.play().then(() => {
-                        this.isPlaying = true;
-                        this.updateIcon();
-                    }).catch(e => {
-                        console.log("Play failed:", e);
-                    });
-                }
-            },
-
-            pause: function() {
-                if (this.current) {
-                    this.current.pause();
-                    this.isPlaying = false;
-                    this.updateIcon();
-                }
-            },
-
-            stop: function() {
-                if (this.current) {
-                    this.current.pause();
-                    this.current.currentTime = 0;
-                }
-                this.isPlaying = false;
-                this.updateIcon();
-            },
-            
-            updateIcon: function() {
-                if (this.isPlaying) {
-                    this.iconPlay.style.display = 'none';
-                    this.iconPause.style.display = 'block';
-                } else {
-                    this.iconPlay.style.display = 'block';
-                    this.iconPause.style.display = 'none';
-                }
-            },
-            
-            showButton: function() {
-                // 确保flex居中
-                this.trackPlayBtn.style.display = 'flex'; 
-                this.updateIcon(); 
-            },
-            
-            hideButton: function() {
-                this.trackPlayBtn.style.display = 'none';
-                this.stop(); // 隐藏按钮时同时也停止音乐
-            }
-        };
+        const radioLoader = new THREE.TextureLoader();
         
-        audioManager.init();
-
-        // --- 1. 背景粒子系统 (基于包络线生成) ---
-        const particleCount = 20000;
-        const geometry = new THREE.BufferGeometry();
-        const positions = new Float32Array(particleCount * 3);
-        const randoms = new Float32Array(particleCount);
-        const sizes = new Float32Array(particleCount);
-        const speeds = new Float32Array(particleCount);
-        const offsets = new Float32Array(particleCount);
-        const bandPositions = new Float32Array(particleCount);
-
-        const initialParticleColor = new THREE.Color(0xffffff);
-        const particleMaterial = new THREE.ShaderMaterial({
-            vertexShader: document.getElementById('vertexShader').textContent,
-            fragmentShader: document.getElementById('fragmentShader').textContent,
+        // --- Radio Mesh ---
+        const introRadioMat = new THREE.ShaderMaterial({
             uniforms: {
+                tDiffuse: { value: new THREE.Texture() }, // Init with empty texture
                 uTime: { value: 0 },
-                uColor: { value: initialParticleColor },
-                uGlobalAlpha: { value: 1.0 } 
+                uGlitchStrength: { value: 0 },
+                uOpacity: { value: 1.0 }, 
+                uDarkness: { value: 0.0 }
             },
+            vertexShader: document.getElementById('glitchVertexShader').textContent,
+            fragmentShader: document.getElementById('glitchFragmentShader').textContent,
             transparent: true,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending
+            side: THREE.DoubleSide
         });
 
-        // --- 2. 纹理生成 ---
-        const textureLoader = new THREE.TextureLoader();
+        // 初始大尺寸，确保可见
+        const introRadioMesh = new THREE.Mesh(new THREE.PlaneGeometry(150, 115), introRadioMat);
+        introGroup.add(introRadioMesh);
+        
+        // --- Title Mesh ---
+        const introTitleMat = new THREE.ShaderMaterial({
+             uniforms: {
+                tDiffuse: { value: new THREE.Texture() }, // Init with empty texture
+                uTime: { value: 0 },
+                uGlitchStrength: { value: 0 },
+                uOpacity: { value: 0.0 }, 
+                uDarkness: { value: 0.0 }
+             },
+             vertexShader: document.getElementById('glitchVertexShader').textContent,
+             fragmentShader: document.getElementById('glitchFragmentShader').textContent,
+             transparent: true,
+             side: THREE.DoubleSide,
+             depthTest: false 
+        });
+        const introTitleMesh = new THREE.Mesh(new THREE.PlaneGeometry(100, 20), introTitleMat);
+        introTitleMesh.position.y = TITLE_Y;
+        introTitleMesh.position.z = TITLE_Z;
+        introGroup.add(introTitleMesh);
 
-        function getHslColorString(index) {
-            const hue = (index * 12) % 360; 
-            return `hsl(${hue}, 70%, 50%)`;
+        // Helper function for fallback textures (colors/text)
+        function createGeneratedTexture(text, colorIndex) {
+            const c=document.createElement('canvas');c.width=512;c.height=512;const x=c.getContext('2d');
+            x.fillStyle=getHslColorString(colorIndex);x.fillRect(0,0,512,512);x.strokeStyle='#fff';x.lineWidth=20;x.strokeRect(10,10,492,492);
+            x.fillStyle='#fff';x.font="bold 120px Helvetica";x.textAlign="center";x.textBaseline="middle";x.fillText(text,256,256);
+            const t=new THREE.CanvasTexture(c);
+            t.anisotropy=renderer.capabilities.getMaxAnisotropy();
+            return t;
         }
 
-        function createCardTexture(text, colorIndex, groupIndex, type, stackIndex) {
-            if (USE_LOCAL_ASSETS) {
-                const n = groupIndex;
-                let filename = '';
+        // 噪点背景
+        const fsNoiseMat = new THREE.ShaderMaterial({
+            uniforms: {
+                tDiffuse: { value: null }, 
+                uTime: { value: 0 },
+                uGlitchStrength: { value: 0 },
+                uOpacity: { value: 0 },
+                uDarkness: { value: 0.0 }
+            },
+            vertexShader: document.getElementById('glitchVertexShader').textContent,
+            fragmentShader: document.getElementById('glitchFragmentShader').textContent,
+            transparent: true,
+            depthTest: false,
+            depthWrite: false
+        });
+        const fsPlane = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), fsNoiseMat);
+        fsPlane.position.z = 50; 
+        introGroup.add(fsPlane);
 
-                if (type === 'main') {
-                    filename = `${n}(0).jpg`;
-                } else if (type === 'down') { 
-                    filename = `${n}(${stackIndex}).jpg`;
-                } else if (type === 'up') { 
-                    filename = `${n}(-${stackIndex}).jpg`;
-                }
+        const noiseC = document.createElement('canvas');
+        noiseC.width = 512; noiseC.height = 512;
+        const nCtx = noiseC.getContext('2d');
+        const nImgData = nCtx.createImageData(512, 512);
+        for(let i=0; i<nImgData.data.length; i+=4) {
+            const val = Math.random() * 255;
+            nImgData.data[i] = val; nImgData.data[i+1] = val; nImgData.data[i+2] = val; nImgData.data[i+3] = 255; 
+        }
+        nCtx.putImageData(nImgData, 0, 0);
+        const noiseTex = new THREE.CanvasTexture(noiseC);
+        fsNoiseMat.uniforms.tDiffuse.value = noiseTex;
+        
+        // 加载标题图片
+        radioLoader.load(INTRO_TITLE_PATH, (tex) => {
+             introTitleMat.uniforms.tDiffuse.value = tex;
+             const img = tex.image;
+             const dist = 75;
+             const vFOV = THREE.Math.degToRad(camera.fov);
+             const visibleHeight = 2 * Math.tan(vFOV / 2) * dist; 
+             const visibleWidth = visibleHeight * camera.aspect;
+             const imgAspect = img.width / img.height;
+             const screenAspect = visibleWidth / visibleHeight;
+             let w, h;
+             if (screenAspect > imgAspect) {
+                 w = visibleWidth;
+                 h = visibleWidth / imgAspect;
+             } else {
+                 h = visibleHeight;
+                 w = visibleHeight * imgAspect;
+             }
+             introTitleMesh.geometry.dispose();
+             introTitleMesh.geometry = new THREE.PlaneGeometry(w * TITLE_SCALE, h * TITLE_SCALE);
+        }, undefined, (err) => {
+             console.warn("Intro Title load failed");
+        });
 
-                const path = `assets/${n}/${filename}`;
-                
-                const tex = textureLoader.load(path, 
-                    () => {}, undefined, (err) => {}
-                );
-                tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-                return tex;
+        // 加载收音机图片
+        radioLoader.load(INTRO_RADIO_PATH, (tex) => {
+            introRadioMat.uniforms.tDiffuse.value = tex;
+            const img = tex.image;
+            const dist = 75;
+            const vFOV = THREE.Math.degToRad(camera.fov);
+            const visibleHeight = 2 * Math.tan(vFOV / 2) * dist; 
+            const imgAspect = img.width / img.height;
+            const visibleWidth = visibleHeight * camera.aspect;
+            const screenAspect = visibleWidth / visibleHeight;
+            let w, h;
+            if (screenAspect > imgAspect) {
+                w = visibleWidth;
+                h = visibleWidth / imgAspect;
+            } else {
+                h = visibleHeight;
+                w = visibleHeight * imgAspect;
             }
+            introRadioMesh.geometry.dispose();
+            introRadioMesh.geometry = new THREE.PlaneGeometry(w * RADIO_SCALE, h * RADIO_SCALE);
+        }, undefined, (err) => {
+             console.warn("Intro Radio load failed");
+        });
 
-            const canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 512;
-            const ctx = canvas.getContext('2d');
-            const color = getHslColorString(colorIndex);
-            ctx.fillStyle = color;
-            ctx.fillRect(0, 0, 512, 512);
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 20;
-            ctx.strokeRect(10, 10, 492, 492);
-            ctx.fillStyle = '#fff';
-            const fontSize = text.length > 3 ? 120 : 200;
-            ctx.font = `bold ${fontSize}px Helvetica`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.shadowColor = "rgba(0,0,0,0.3)";
-            ctx.shadowBlur = 10;
-            ctx.fillText(text, 256, 256);
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-            return texture;
-        }
-
-        const helloTexture = (function() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 512;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, 512, 512);
-            ctx.fillStyle = '#000000';
-            ctx.font = "italic 40px Helvetica"; 
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText("hello world", 256, 256);
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-            return texture;
-        })();
-
-        // --- 3. 专辑构建 & 边界计算 ---
-        const albums = []; 
+        // --- Main Scene Objects ---
         const albumGroup = new THREE.Group();
+        const albums = []; 
+        albumGroup.visible = false;
         scene.add(albumGroup);
 
-        const boxGeometry = new THREE.BoxGeometry(4, 4, 0.1); 
-        const sideMaterial = new THREE.MeshBasicMaterial({ color: 0x222222 }); 
+        const particleCount = 20000;
+        const pGeo = new THREE.BufferGeometry();
+        const pPos = new Float32Array(particleCount * 3);
+        const pRand = new Float32Array(particleCount);
+        const pSize = new Float32Array(particleCount);
+        const pSpeed = new Float32Array(particleCount);
+        const pOffset = new Float32Array(particleCount);
+        const pBand = new Float32Array(particleCount);
 
-        // 收集每组的边界信息 { u, vMin, vMax }
-        const groupBoundaries = []; 
+        const fadeMargin = 15.0;
+        const groupBoundaries = [];
+        const boxGeometry = new THREE.BoxGeometry(4, 4, 0.1); 
+        const sideMaterial = new THREE.MeshBasicMaterial({ color: 0x111111 }); 
+        const textureLoader = new THREE.TextureLoader();
+
+        function getHslColorString(index) { return `hsl(${(index * 12) % 360}, 70%, 50%)`; }
+
+        const overlayTexture = (function(){
+            const c=document.createElement('canvas');c.width=512;c.height=512;const x=c.getContext('2d');
+            x.fillStyle='rgba(0,0,0,0.6)';x.fillRect(0,0,512,512);x.fillStyle='#fff';x.font="italic 40px Helvetica";
+            x.textAlign="center";x.textBaseline="middle";x.fillText("hello world",256,256);return new THREE.CanvasTexture(c);
+        })();
+
+        function createCardTexture(text, colorIndex, groupIndex, type, stackIndex) {
+            // Default fallback texture (canvas generated)
+            const fallbackTex = createGeneratedTexture(text, colorIndex);
+
+            if(USE_LOCAL_ASSETS) {
+                // Construct filename logic based on type
+                let filename = `${groupIndex}(0).jpg`;
+                if (type === 'down') filename = `${groupIndex}(${stackIndex}).jpg`;
+                if (type === 'up') filename = `${groupIndex}(-${stackIndex}).jpg`;
+                const path = `assets/${groupIndex}/${filename}`;
+
+                // Try to load local asset manually first to catch errors
+                const loader = new THREE.ImageLoader();
+                loader.load(path, 
+                    function (image) {
+                        // Success: update texture
+                        fallbackTex.image = image;
+                        fallbackTex.needsUpdate = true;
+                    },
+                    undefined,
+                    function (err) {
+                        // Error: silent fail, keep fallback
+                        console.warn("Image load failed:", path);
+                    }
+                );
+                return fallbackTex;
+            }
+            return fallbackTex;
+        }
+
+        // --- Helper: Create Local Resonance Particle Geometry ---
+        function updateResonanceGeometry(system, count) {
+            const positions = [];
+            for(let i=0; i<count; i++) {
+                // Generate point in sphere, density decays from center
+                // Using power > 1 for random radius pushes points closer to center
+                const r = RESONANCE_MIN_RADIUS + RESONANCE_SPREAD * Math.pow(Math.random(), 2); 
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                
+                const x = r * Math.sin(phi) * Math.cos(theta);
+                const y = r * Math.sin(phi) * Math.sin(theta);
+                const z = r * Math.cos(phi);
+                
+                positions.push(x, y, z);
+            }
+            system.geometry.dispose();
+            system.geometry = new THREE.BufferGeometry();
+            system.geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        }
 
         function createCard(u, vOffset, label, colorIndex, groupIndex, type, stackIndex) {
             const containerGroup = new THREE.Group();
-            
-            const mainTexture = createCardTexture(label, colorIndex, groupIndex, type, stackIndex);
-            const mainMaterial = new THREE.MeshBasicMaterial({ map: mainTexture });
-
-            const materials = [
-                sideMaterial, sideMaterial, sideMaterial, sideMaterial,
-                mainMaterial, 
-                mainMaterial  
-            ];
-
-            const mesh = new THREE.Mesh(boxGeometry, materials);
+            const mainTex = createCardTexture(label, colorIndex, groupIndex, type, stackIndex);
+            const mainMat = new THREE.MeshBasicMaterial({ map: mainTex, color: 0xffffff });
+            const mesh = new THREE.Mesh(boxGeometry, [sideMaterial,sideMaterial,sideMaterial,sideMaterial,mainMat,mainMat]);
             containerGroup.add(mesh);
 
+            const backGroup = new THREE.Group();
+            const backMesh = new THREE.Mesh(new THREE.PlaneGeometry(4,4), mainMat);
+            const overMesh = new THREE.Mesh(new THREE.PlaneGeometry(4,4), new THREE.MeshBasicMaterial({map:overlayTexture, transparent:true, opacity:1, side:THREE.DoubleSide}));
+            overMesh.position.z = 0.01; overMesh.visible = false;
+            backGroup.add(backMesh); backGroup.add(overMesh);
+            backGroup.rotation.y = Math.PI; backGroup.position.z = -0.051;
+            mesh.add(backGroup);
+
+            // --- Local Resonance Particle System (Initially Empty/Invisible) ---
+            const pGeo = new THREE.BufferGeometry();
+            const pMat = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.15,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+            const pSys = new THREE.Points(pGeo, pMat);
+            pSys.visible = false; 
+            containerGroup.add(pSys);
+
+            // Removed random initial resonance for this version to follow strict rules
+            // const initRes = (groupIndex === 5) ? 60 : Math.floor(Math.random()*20);
+            
             containerGroup.userData = {
-                u: u,
-                offsetY: vOffset,
-                posIndex: colorIndex, 
-                groupId: groupIndex,  
-                colorIndex: colorIndex, 
-                labelText: label,
-                isFlipped: false, 
-                currentScale: 1.0, 
-                originalMaterial: mainMaterial, 
-                innerMesh: mesh,
-                cardType: type
+                u, offsetY: vOffset, posIndex: colorIndex, groupId: groupIndex,
+                labelText: label, isFlipped: false, currentScale: 1.0,
+                originalMaterial: mainMat, innerMesh: mesh, cardType: type,
+                overlayMesh: overMesh, resonanceParticles: pSys, 
+                localClicks: 0, currentParticleCount: 0 
             };
             
             albumGroup.add(containerGroup);
             albums.push(containerGroup);
+            
+            // Expose globally for sync
+            if (!window.albums) window.albums = [];
+            window.albums.push(containerGroup);
         }
 
         const albumCount = 30;
         const spacing = 5.0;
-
-        // 定义排序后的组别顺序 (根据专辑数量从小到大)
-        const groupOrder = [
-            12, 
-            29, 
-            18, 
-            5, 11, 25, 
-            13, 24, 
-            8, 21, 22, 27, 28, 30, 
-            7, 20, 
-            1, 2, 4, 10, 15, 16, 17, 19, 26, 
-            6, 23, 
-            3, 9, 14
-        ];
-
-        // --- 生成所有专辑并记录边界 ---
+        const groupOrder = [12, 29, 18, 5, 11, 25, 13, 24, 8, 21, 22, 27, 28, 30, 7, 20, 1, 2, 4, 10, 15, 16, 17, 19, 26, 6, 23, 3, 9, 14];
+        
         for (let i = 0; i < albumCount; i++) {
             const visualAngle = (i / albumCount) * Math.PI * 2; 
             const u = (i % 2 === 1) ? visualAngle + Math.PI * 2 : visualAngle;
-            
             const n = groupOrder[i];
-            
-            // 计算该组的上下边界
-            let minM = 0;
-            let maxM = 0;
-
-            // 检查向下延伸
-            for (let m = 1; m <= 15; m++) {
-                if (albumData[`${n}(${m})`]) maxM = m;
-                else break;
-            }
-            // 检查向上延伸
-            for (let m = 1; m <= 15; m++) {
-                if (albumData[`${n}(-${m})`]) minM = -m;
-                else break;
-            }
-
-            // 记录边界（加一点余量让粒子包裹住）
-            groupBoundaries.push({
-                u: u,
-                vMin: (Math.min(0, minM) * spacing) - 2.0,
-                vMax: (Math.max(0, maxM) * spacing) + 2.0
-            });
-
-            // 生成实际卡片
+            let minM = 0; let maxM = 0;
+            for (let m = 1; m <= 15; m++) { if (albumData[`${n}(${m})`]) maxM = m; else break; }
+            for (let m = 1; m <= 15; m++) { if (albumData[`${n}(-${m})`]) minM = -m; else break; }
+            groupBoundaries.push({ u, vMin: (Math.min(0, minM) * spacing) - 2.0, vMax: (Math.max(0, maxM) * spacing) + 2.0 });
             createCard(u, 0, `${n}(0)`, i, n, 'main', 0);
-
-            for (let m = 1; m <= maxM; m++) {
-                createCard(u, spacing * m, `${n}(${m})`, i, n, 'down', m);
-            }
-            for (let m = 1; m <= Math.abs(minM); m++) {
-                createCard(u, -spacing * m, `${n}(-${m})`, i, n, 'up', m);
-            }
+            for (let m = 1; m <= maxM; m++) createCard(u, spacing * m, `${n}(${m})`, i, n, 'down', m);
+            for (let m = 1; m <= Math.abs(minM); m++) createCard(u, -spacing * m, `${n}(-${m})`, i, n, 'up', m);
         }
-
-        // --- 构建插值曲线 ---
-        // 1. 按 u 排序
         groupBoundaries.sort((a, b) => a.u - b.u);
 
-        // 2. 粒子生成：使用线性插值
         function getBoundaryAt(targetU) {
-            // Wrap u to 0-4PI
-            let u = targetU % (4 * Math.PI);
-            if (u < 0) u += 4 * Math.PI;
-
-            let p1 = groupBoundaries[groupBoundaries.length - 1];
-            let p2 = groupBoundaries[0];
-            
+            let u = targetU % (4 * Math.PI); if (u < 0) u += 4 * Math.PI;
+            let p1 = groupBoundaries[groupBoundaries.length - 1], p2 = groupBoundaries[0];
             for (let i = 0; i < groupBoundaries.length - 1; i++) {
-                if (u >= groupBoundaries[i].u && u < groupBoundaries[i+1].u) {
-                    p1 = groupBoundaries[i];
-                    p2 = groupBoundaries[i+1];
-                    break;
-                }
+                if (u >= groupBoundaries[i].u && u < groupBoundaries[i+1].u) { p1 = groupBoundaries[i]; p2 = groupBoundaries[i+1]; break; }
             }
-            
-            let u1 = p1.u;
-            let u2 = p2.u;
-            
-            if (u2 < u1) { 
-                 u2 += 4 * Math.PI;
-                 if (u < u1) u += 4 * Math.PI; 
-            }
-
-            const tLinear = (u - u1) / (u2 - u1);
-            const t = tLinear * tLinear * (3 - 2 * tLinear); // Smoothstep
-            
-            const vMin = p1.vMin + (p2.vMin - p1.vMin) * t;
-            const vMax = p1.vMax + (p2.vMax - p1.vMax) * t;
-            
-            return { vMin, vMax };
+            let u1 = p1.u, u2 = p2.u; if (u2 < u1) { u2 += 4 * Math.PI; if (u < u1) u += 4 * Math.PI; }
+            const t = ((u - u1) / (u2 - u1));
+            const tSmooth = t * t * (3 - 2 * t);
+            return { vMin: p1.vMin + (p2.vMin - p1.vMin) * tSmooth, vMax: p1.vMax + (p2.vMax - p1.vMax) * tSmooth };
         }
-
-        // --- 生成粒子 (梯形分布) ---
-        const fadeMargin = 15.0; // 渐变边缘宽度
 
         for (let i = 0; i < particleCount; i++) {
-            positions[i] = 0; positions[i+1] = 0; positions[i+2] = 0;
-            randoms[i] = Math.random();
-            sizes[i] = Math.random() < 0.2 ? Math.random() * 1.5 + 0.5 : Math.random();
-            speeds[i] = 0.15 + (Math.random() - 0.5) * 0.02; 
-            
-            const u = Math.random() * 4 * Math.PI;
-            offsets[i] = u;
-            
-            const bounds = getBoundaryAt(u);
-            const coreHeight = bounds.vMax - bounds.vMin;
-            
-            // 总概率区间长度 = 核心高度 + 边缘渐变等效高度 (三角形面积=0.5*底*高, 高是概率密度1.0)
-            const totalArea = coreHeight + fadeMargin;
-            
-            const r = Math.random() * totalArea;
-            
-            if (r < coreHeight) {
-                bandPositions[i] = bounds.vMin + r;
-            } else {
-                const dist = fadeMargin * (1.0 - Math.sqrt(Math.random()));
-                if (Math.random() < 0.5) {
-                    bandPositions[i] = bounds.vMax + dist;
-                } else {
-                    bandPositions[i] = bounds.vMin - dist;
-                }
-            }
+            pPos[i*3]=0; pPos[i*3+1]=0; pPos[i*3+2]=0;
+            pRand[i]=Math.random(); pSize[i]=Math.random()<0.2 ? Math.random()*1.5+0.5 : Math.random();
+            pSpeed[i]=0.15+(Math.random()-0.5)*0.02; 
+            const u=Math.random()*4*Math.PI; pOffset[i]=u;
+            const b=getBoundaryAt(u); const h=b.vMax-b.vMin; const total=h+fadeMargin; const r=Math.random()*total;
+            if(r<h) pBand[i]=b.vMin+r; else { const d=fadeMargin*(1-Math.sqrt(Math.random())); pBand[i]=(Math.random()<0.5)?b.vMax+d : b.vMin-d; }
         }
-
-        // 更新 BufferAttribute
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        geometry.setAttribute('aRandom', new THREE.BufferAttribute(randoms, 1));
-        geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
-        geometry.setAttribute('aSpeed', new THREE.BufferAttribute(speeds, 1));
-        geometry.setAttribute('aOffset', new THREE.BufferAttribute(offsets, 1));
-        geometry.setAttribute('aBandPosition', new THREE.BufferAttribute(bandPositions, 1));
-
-        // 创建粒子系统
-        const particleSystemFinal = new THREE.Points(geometry, particleMaterial);
-        particleSystemFinal.frustumCulled = false;
-        scene.add(particleSystemFinal);
-
-
-        function getMobiusPosition(u, v) {
-            const radius = 35.0;
-            const wave = Math.sin(u * 2.0) * 5.0;
-            const cosHalfU = Math.cos(u * 0.5);
-            const sinHalfU = Math.sin(u * 0.5);
-            const cosU = Math.cos(u);
-            const sinU = Math.sin(u);
-
-            const x = (radius + v * cosHalfU) * cosU;
-            const y = (radius + v * cosHalfU) * sinU;
-            const z = v * sinHalfU + wave;
-
-            const angleX = 0.4;
-            const ca = Math.cos(angleX);
-            const sa = Math.sin(angleX);
-            
-            return new THREE.Vector3(x, y * ca - z * sa, y * sa + z * ca);
-        }
-
-        // --- 4. 交互核心 ---
-        let targetRotationX = 0;
-        let targetRotationY = 0;
-        let mouseX = 0; 
-        let mouseY = 0;
+        pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+        pGeo.setAttribute('aRandom', new THREE.BufferAttribute(pRand, 1));
+        pGeo.setAttribute('aSize', new THREE.BufferAttribute(pSize, 1));
+        pGeo.setAttribute('aSpeed', new THREE.BufferAttribute(pSpeed, 1));
+        pGeo.setAttribute('aOffset', new THREE.BufferAttribute(pOffset, 1));
+        pGeo.setAttribute('aBandPosition', new THREE.BufferAttribute(pBand, 1));
         
-        let isDragging = false;
-        let isPanning = false; 
-        
-        // 关键变量：记录“点击时刻”和“上一帧拖拽时刻”的位置
-        let dragStartPos = { x: 0, y: 0 }; // 仅在 mousedown 更新，用于判定 totalDragDistance
-        let lastMovePos = { x: 0, y: 0 };  // 在 mousedown 和 mousemove 更新，用于计算 delta
-        
-        let simulatedTime = 0; 
-        let isFocused = false; 
-        let focusedAlbum = null; 
-        let isGlobalPaused = false; 
-        
-        let camTargetPos = new THREE.Vector3(0, DEFAULT_CAM_Y, DEFAULT_CAM_Z);
-        let camLookAtPos = new THREE.Vector3(0, 0, 0);
-        let camTargetUp = new THREE.Vector3(0, 1, 0);
-
-        // 新增：聚焦时的轨道旋转角度
-        let focusRotX = 0;
-        let focusRotY = 0;
-
-        let targetGlobalAlpha = 1.0;
-        let currentGlobalAlpha = 1.0;
-
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-        
-        const albumLabelEl = document.getElementById('album-label');
-
-        function resetGlobalView() {
-            if (focusedAlbum) {
-                resetFlip(focusedAlbum);
-            }
-
-            // --- 新增：恢复所有卡片的正常深度遮挡关系和可见性 ---
-            albums.forEach(group => {
-                group.visible = true; // 恢复可见
-                const mesh = group.userData.innerMesh;
-                mesh.renderOrder = 0; 
-                if (Array.isArray(mesh.material)) {
-                    mesh.material.forEach(m => m.depthTest = true); 
-                } else {
-                    mesh.material.depthTest = true;
-                }
-            });
-            // ------------------------------------------
-
-            isFocused = false;
-            focusedAlbum = null;
-
-            camTargetPos.set(0, DEFAULT_CAM_Y, DEFAULT_CAM_Z);
-            camLookAtPos.set(0, 0, 0);
-            camTargetUp.set(0, 1, 0);
-
-            targetRotationX = 0;
-            targetRotationY = 0;
-            
-            targetGlobalAlpha = 1.0;
-            albumLabelEl.style.opacity = '0';
-            audioManager.stop();
-            audioManager.hideButton(); // 确保隐藏按钮
-        }
-
-        document.getElementById('reset-btn').addEventListener('click', (e) => {
-            e.stopPropagation(); 
-            resetGlobalView();
+        const particleMaterial = new THREE.ShaderMaterial({
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('fragmentShader').textContent,
+            uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(0xffffff) }, uGlobalAlpha: { value: 1.0 } },
+            transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
         });
+        const particleSystem = new THREE.Points(pGeo, particleMaterial);
+        particleSystem.frustumCulled = false;
+        particleSystem.visible = false; 
+        scene.add(particleSystem);
 
-        // --- 播放/暂停按钮逻辑 ---
-        const playPauseBtn = document.getElementById('play-pause-btn');
-        const iconPause = document.getElementById('icon-pause');
-        const iconPlay = document.getElementById('icon-play');
+        function getMobiusPos(u, v) {
+            const r=35, w=Math.sin(u*2)*5, ch=Math.cos(u*0.5), sh=Math.sin(u*0.5), cu=Math.cos(u), su=Math.sin(u);
+            const x=(r+v*ch)*cu, y=(r+v*ch)*su, z=v*sh+w;
+            const ca=Math.cos(0.4), sa=Math.sin(0.4);
+            return new THREE.Vector3(x, y*ca-z*sa, y*sa+z*ca);
+        }
 
-        playPauseBtn.addEventListener('click', (e) => {
+        // --- Interaction & Animation State ---
+        let trX = 0, trY = 0, mX = 0, mY = 0, isDrag = false, isPan = false;
+        let dragS = {x:0,y:0}, lastM = {x:0,y:0}, simTime = 0;
+        let isFocused = false, focusedAlbum = null, isPaused = false;
+        let camT = new THREE.Vector3(0, DEFAULT_CAM_Y, DEFAULT_CAM_Z);
+        let camL = new THREE.Vector3(0,0,0), camUp = new THREE.Vector3(0,1,0);
+        let fRotX = 0, fRotY = 0, curAlpha = 1.0;
+        // Focus state variables for camera control
+        let fDist = 8.0;
+        let fPan = new THREE.Vector3(0,0,0);
+        
+        const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+        
+        // --- TIMELINE SEQUENCER ---
+        const startTime = Date.now();
+        let introPhase = 0; 
+        let glitchStartTime = null;
+
+        // 【音频文件映射表】
+        // 格式: "卡片ID": "音频文件路径"
+        const TRACK_SOURCES = {
+            "12(0)": "assets/12/12(01).mp3",
+            "21(0)": "assets/21/21(01).mp3", // 周杰伦 Jay
+            "21(3)": "assets/21/21(31).mp3", // 周杰伦 叶惠美
+            "21(4)": "assets/21/21(41).mp3"  // 周杰伦 七里香
+        };
+
+        // Mock audioManager for preview so code doesn't crash on click
+        window.audioManager = {
+            albumLabelEl: document.getElementById('album-label'),
+            audioEl: new Audio(),
+            isPlaying: false,
+            
+            load: function(src){ 
+                if (src) {
+                    this.audioEl.src = src;
+                } else {
+                    this.audioEl.src = ''; 
+                }
+            },
+            playToggle: function() {
+                if (!window.userSystem.isLoggedIn) {
+                    alert("Please Login to Play Music");
+                    return;
+                }
+                if (!this.audioEl.src) return;
+                if (this.audioEl.paused) {
+                    this.audioEl.play().catch(e=>console.log("Audio play error", e));
+                    document.getElementById('track-icon-play').style.display = 'none';
+                    document.getElementById('track-icon-pause').style.display = 'block';
+                } else {
+                    this.audioEl.pause();
+                    document.getElementById('track-icon-play').style.display = 'block';
+                    document.getElementById('track-icon-pause').style.display = 'none';
+                }
+            },
+            stop: function(){
+                this.audioEl.pause();
+                this.audioEl.currentTime = 0;
+                document.getElementById('track-icon-play').style.display = 'block';
+                document.getElementById('track-icon-pause').style.display = 'none';
+            },
+            resonate: function() {
+                if (!window.userSystem.isLoggedIn) {
+                    alert("Please Login to Resonate");
+                    return;
+                }
+                if (!focusedAlbum) return;
+                // Add resonance logic via User System
+                const userData = focusedAlbum.userData;
+                const title = userData.labelText;
+                const artist = albumData[title] ? albumData[title].artist : "Unknown";
+                
+                const success = window.userSystem.addResonance(title, artist);
+                if (!success) {
+                    // Optional: Visual feedback that max limit reached
+                    console.log("Max resonance reached or not logged in");
+                }
+            },
+            showButton: function(){ document.getElementById('track-play-btn').style.display='flex'; },
+            hideButton: function(){ document.getElementById('track-play-btn').style.display='none'; },
+            showResonateButton: function(){ document.getElementById('resonate-btn').style.display='flex'; },
+            hideResonateButton: function(){ document.getElementById('resonate-btn').style.display='none'; }
+        };
+        
+        // Bind play button click
+        document.getElementById('track-play-btn').onclick = (e) => {
             e.stopPropagation();
-            isGlobalPaused = !isGlobalPaused;
-            if (isGlobalPaused) {
-                iconPause.style.display = 'none';
-                iconPlay.style.display = 'block';
-            } else {
-                iconPause.style.display = 'block';
-                iconPlay.style.display = 'none';
-            }
-        });
+            window.audioManager.playToggle();
+        };
+        
+        // Bind resonate button click
+        document.getElementById('resonate-btn').onclick = (e) => {
+            e.stopPropagation();
+            window.audioManager.resonate();
+        };
 
-        function onStart(e) {
-            // 如果点击的是 UI 控件，则不触发场景拖拽
-            if (e.target.closest('.control-btn') || e.target.closest('#track-play-btn')) return;
-
-            if (e.button === 0) {
-                isDragging = true;
-            } else if (e.button === 1) {
-                isPanning = true;
-                e.preventDefault(); 
+        function updateIntro() {
+            if (introPhase === 3) {
+                 if (introTitleMesh.visible) introTitleMesh.visible = false;
+                 return;
             }
+
+            const now = Date.now();
+            const elapsedSinceLoad = (now - startTime) / 1000;
             
-            // 初始化记录点
-            dragStartPos = { x: e.clientX, y: e.clientY };
-            lastMovePos = { x: e.clientX, y: e.clientY };
-        }
+            introRadioMat.uniforms.uTime.value = elapsedSinceLoad;
+            introTitleMat.uniforms.uTime.value = elapsedSinceLoad;
+            fsNoiseMat.uniforms.uTime.value = elapsedSinceLoad;
 
-        function onEnd(e) {
-            // 如果是 UI 控件释放，也不触发场景逻辑
-             if (e.target.closest('.control-btn') || e.target.closest('#track-play-btn')) return;
-
-            if (isDragging) {
-                isDragging = false;
-                // 使用 dragStartPos 计算总移动距离，判定是否为点击
-                const dist = Math.sqrt(Math.pow(e.clientX - dragStartPos.x, 2) + Math.pow(e.clientY - dragStartPos.y, 2));
+            if (introPhase === 0) {
+                introRadioMesh.position.y = Math.sin(elapsedSinceLoad * 1.5) * 0.5;
+            } else if (introPhase === 1) {
+                const elapsedGlitch = (now - glitchStartTime) / 1000;
                 
-                // 阈值设为 10px，小于此值视为点击
-                if (dist < 10 && e.button === 0) {
-                    handleClick(e.clientX, e.clientY);
+                let radioStrength = 0;
+                let radioOpacity = 1.0;
+                let radioDarkness = 0.0;
+                
+                // 1. 收音机故障逻辑 (0-1.4s)
+                if (elapsedGlitch < 0.6) {
+                    radioStrength = 0.0;
+                } else if (elapsedGlitch < 1.4) {
+                    const intensity = (elapsedGlitch - 0.6) / 0.8; 
+                    radioStrength = 5.0 + intensity * 40.0;
+                } 
+                
+                // 2. 收音机最后0.5秒淡出变黑 (1.4s -> 1.9s)
+                if (elapsedGlitch > 1.4) {
+                    const fadeProgress = (elapsedGlitch - 1.4) / 0.5;
+                    radioOpacity = Math.max(0.0, 1.0 - fadeProgress);
+                    radioDarkness = Math.min(1.0, fadeProgress);
+                    radioStrength = 45.0; 
                 }
-            }
-            if (isPanning) {
-                isPanning = false;
+
+                // 3. 全屏雪花噪点
+                if (elapsedGlitch > 0.5) {
+                    const fsIntensity = Math.min(1, (elapsedGlitch - 0.5) / 0.7);
+                    fsNoiseMat.uniforms.uOpacity.value = fsIntensity * 0.5; 
+                    fsNoiseMat.uniforms.uGlitchStrength.value = 10.0 + fsIntensity * 20.0;
+                    
+                    if (elapsedGlitch > 1.4) {
+                        const darkness = Math.min(1.0, (elapsedGlitch - 1.4) / 0.5);
+                        fsNoiseMat.uniforms.uDarkness.value = darkness;
+                        fsNoiseMat.uniforms.uOpacity.value = 0.5 * (1.0 - darkness);
+                    }
+                    
+                    if (!document.body.classList.contains('glitch-active')) {
+                        document.body.classList.add('glitch-active');
+                    }
+                }
+                
+                // 4. Title 出现：雪花消失前 0.2s (即 1.7s)
+                if (elapsedGlitch > 1.7 && typeof introTitleMat !== 'undefined') {
+                     const titleProgress = (elapsedGlitch - 1.7) / 0.2;
+                     introTitleMat.uniforms.uOpacity.value = Math.min(1.0, titleProgress);
+                }
+
+                introRadioMat.uniforms.uGlitchStrength.value = radioStrength;
+                introRadioMat.uniforms.uOpacity.value = radioOpacity;
+                introRadioMat.uniforms.uDarkness.value = radioDarkness;
+
+                const shakeMag = 0.5 + (elapsedGlitch / 1.9) * 4.0;
+                introRadioMesh.position.x = (Math.random() - 0.5) * shakeMag;
+                introRadioMesh.position.y = (Math.random() - 0.5) * shakeMag;
+
+                if (elapsedGlitch > 1.9) {
+                    introPhase = 2;
+                    introRadioMesh.visible = false;
+                    fsPlane.visible = false;
+                    document.body.classList.remove('glitch-active');
+                }
+
+            } else if (introPhase === 2) {
+                const elapsedGlitch = (now - glitchStartTime) / 1000;
+                const phase2Time = elapsedGlitch - 1.9;
+                
+                if (phase2Time < 0.4) {
+                    introTitleMat.uniforms.uOpacity.value = Math.min(1.0, 0.5 + (phase2Time / 0.4) * 0.5);
+                } 
+                else if (phase2Time < 1.4) {
+                    introTitleMat.uniforms.uOpacity.value = 1.0;
+                }
+                else if (phase2Time < 1.8) {
+                    introTitleMat.uniforms.uOpacity.value = Math.max(0, 1.0 - (phase2Time - 1.4) / 0.4);
+                }
+                
+                if (phase2Time > 1.8) {
+                    introPhase = 3;
+                    albumGroup.visible = true;
+                    particleSystem.visible = true;
+                    document.querySelectorAll('.ui-element').forEach(el => el.classList.add('fade-in'));
+                }
             }
         }
         
-        function onWheel(e) {
-            if (isFocused) return; 
+        function startExperience() {
+            if (introPhase === 0) {
+                introPhase = 1;
+                glitchStartTime = Date.now();
+                document.getElementById('intro-hint').style.display = 'none';
+            }
+        }
+        
+        document.body.addEventListener('click', startExperience);
+        document.body.addEventListener('touchstart', startExperience);
+
+        function onStart(e) { if(e.target.closest('.control-btn') || e.target.closest('#resonate-btn') || e.target.closest('#track-play-btn') || e.target.closest('#overlay-container') || e.target.closest('#top-bar')) return; if(e.button===0) isDrag=true; else if(e.button===1) isPan=true; dragS={x:e.clientX,y:e.clientY}; lastM={x:e.clientX,y:e.clientY}; }
+        function onEnd(e) { if(e.target.closest('.control-btn') || e.target.closest('#resonate-btn') || e.target.closest('#track-play-btn') || e.target.closest('#overlay-container') || e.target.closest('#top-bar')) return; if(isDrag) { isDrag=false; if(Math.sqrt(Math.pow(e.clientX-dragS.x,2)+Math.pow(e.clientY-dragS.y,2))<10 && e.button===0) handleClick(e.clientX,e.clientY); } if(isPan) isPan=false; }
+        function onMove(e) { if(e.target.closest('.control-btn') || e.target.closest('#track-play-btn') || e.target.closest('#resonate-btn') || e.target.closest('#overlay-container') || e.target.closest('#top-bar')) return; const dx=e.clientX-lastM.x, dy=e.clientY-lastM.y; mX=(e.clientX/window.innerWidth)*2-1; mY=-(e.clientY/window.innerHeight)*2+1; 
+            if(isDrag) { 
+                if(!isFocused){ trY+=dx*0.005; trX+=dy*0.005; } 
+                else { fRotY-=dx*0.005; fRotX-=dy*0.005; fRotX=Math.max(-1.5, Math.min(1.5,fRotX)); } 
+            } else if(isPan) { 
+                if (!isFocused) {
+                    camT.x-=dx*0.05; camT.y+=dy*0.05; camL.x-=dx*0.05; camL.y+=dy*0.05; 
+                } else {
+                    // Pan while focused
+                    const sensitivity = 0.01 * (fDist / 8.0); 
+                    fPan.x -= dx * sensitivity;
+                    fPan.y += dy * sensitivity;
+                }
+            } 
+            lastM={x:e.clientX,y:e.clientY}; 
+        }
+        
+        document.addEventListener('mousedown', onStart); document.addEventListener('mouseup', onEnd); document.addEventListener('mousemove', onMove);
+        document.addEventListener('touchstart', e=>onStart({button:0,clientX:e.touches[0].clientX,clientY:e.touches[0].clientY}), {passive:false});
+        document.addEventListener('touchend', e=>onEnd({button:0,clientX:e.changedTouches[0].clientX,clientY:e.changedTouches[0].clientY}));
+        document.addEventListener('touchmove', e=>{onMove({clientX:e.touches[0].clientX,clientY:e.touches[0].clientY});e.preventDefault();}, {passive:false});
+        
+        // --- 【修改滚轮事件逻辑】支持聚焦模式下的缩放 ---
+        document.addEventListener('wheel', e => {
             e.preventDefault();
-            const zoomSpeed = 0.1;
-            let newZ = camTargetPos.z + e.deltaY * zoomSpeed;
-            newZ = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZ));
-            camTargetPos.z = newZ;
-        }
-
-        function onMove(e) {
-             if (e.target.closest('.control-btn') || e.target.closest('#track-play-btn')) return;
-
-            const clientX = e.clientX;
-            const clientY = e.clientY;
-            mouseX = (clientX / window.innerWidth) * 2 - 1;
-            mouseY = -(clientY / window.innerHeight) * 2 + 1;
-
-            // 计算与上一帧的偏移量
-            const deltaX = clientX - lastMovePos.x;
-            const deltaY = clientY - lastMovePos.y;
-
-            if (isDragging) {
-                if (!isFocused) {
-                    // 全局旋转
-                    targetRotationY += deltaX * 0.005;
-                    targetRotationX += deltaY * 0.005;
-                } else {
-                    // 聚焦时：轨道旋转 (Orbit around card)
-                    focusRotY -= deltaX * 0.005;
-                    focusRotX -= deltaY * 0.005;
-                    // 限制上下旋转角度，防止翻转
-                    focusRotX = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, focusRotX));
-                }
-            } else if (isPanning && !isFocused) { 
-                const panSpeed = 0.05;
-                camTargetPos.x -= deltaX * panSpeed;
-                camTargetPos.y += deltaY * panSpeed; 
-                camLookAtPos.x -= deltaX * panSpeed;
-                camLookAtPos.y += deltaY * panSpeed;
-            }
-
-            // 更新上一帧位置，供下一次 delta 计算
-            lastMovePos = { x: clientX, y: clientY };
-        }
-
-        function handleClick(clientX, clientY) {
-            mouse.x = (clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
-            scene.updateMatrixWorld();
-            const allMeshes = [];
-            albums.forEach(group => {
-                if(group.visible) allMeshes.push(group.userData.innerMesh);
-            });
-            const intersects = raycaster.intersectObjects(allMeshes);
-
-            if (intersects.length > 0) {
-                const clickedMesh = intersects[0].object;
-                const clickedGroup = clickedMesh.parent; 
-                if (!isFocused) {
-                    focusOnAlbum(clickedGroup);
-                } else {
-                    if (clickedGroup === focusedAlbum) {
-                        toggleFlip(clickedGroup);
-                    } else {
-                        // 切换聚焦前先重置 visibility
-                        resetGlobalView();
-                        // 下一帧再聚焦，或直接重置状态
-                        // 简单处理：直接聚焦新卡片，focusOnAlbum 会处理隐藏逻辑
-                        focusOnAlbum(clickedGroup);
-                    }
-                }
+            if (!isFocused) {
+                camT.z = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, camT.z + e.deltaY * 0.1));
             } else {
-                if (isFocused) resetGlobalView(); 
+                // 聚焦时允许缩放
+                // 扩大上限到100.0，使视角能拉得更远
+                fDist = Math.max(2.0, Math.min(100.0, fDist + e.deltaY * 0.05));
             }
-        }
+        }, { passive: false });
+        
+        document.getElementById('reset-btn').onclick = (e) => { e.stopPropagation(); resetGlobalView(); };
+        document.getElementById('play-pause-btn').onclick = (e) => { e.stopPropagation(); isPaused=!isPaused; document.getElementById('icon-pause').style.display=isPaused?'none':'block'; document.getElementById('icon-play').style.display=isPaused?'block':'none'; };
 
-        function toggleFlip(group) {
-            const mesh = group.userData.innerMesh;
-            group.userData.isFlipped = !group.userData.isFlipped;
-            if (group.userData.isFlipped) {
-                if (Array.isArray(mesh.material)) {
-                    mesh.material[5] = new THREE.MeshBasicMaterial({ map: helloTexture });
-                }
-            }
-        }
-
-        function resetFlip(group) {
-            if (!group) return;
-            group.userData.isFlipped = false;
-            const mesh = group.userData.innerMesh;
-            if (Array.isArray(mesh.material)) {
-                mesh.material[5] = group.userData.originalMaterial;
-            }
-            mesh.rotation.y = 0;
-        }
-
-        function focusOnAlbum(group) {
-            isFocused = true;
-            focusedAlbum = group;
-            targetGlobalAlpha = 0.0;
+        function handleClick(cx, cy) {
+            if (introPhase < 3) return;
             
-            // 重置轨道旋转角度
-            focusRotX = 0;
-            focusRotY = 0;
+            // Check if UI is active (profile modal open)
+            const overlay = document.getElementById('overlay-container');
+            if (overlay.classList.contains('active')) {
+                // If clicking outside the modal box, close it
+                // Note: The modal box itself stops propagation, so clicks here are definitely outside
+                // BUT we need to check target carefully
+                // Actually, due to pointer-events: auto on overlay, any click not on .modal-box (which handles its own clicks or propagates to parent) 
+                // is handled by overlay.onclick defined below.
+                // So handleClick shouldn't fire if overlay is active because overlay covers canvas.
+                // However, we set pointer-events to auto for overlay to capture clicks.
+                // So canvas interactions are blocked by overlay. 
+                return;
+            }
 
-            scene.updateMatrixWorld();
-            const worldPos = new THREE.Vector3();
-            group.getWorldPosition(worldPos);
-            const worldQuat = new THREE.Quaternion();
-            group.getWorldQuaternion(worldQuat);
-            const worldNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(worldQuat);
-            const worldUp = new THREE.Vector3(0, 1, 0).applyQuaternion(worldQuat);
-
-            camLookAtPos.copy(worldPos);
-            const distance = 8.0; 
-            camTargetPos.copy(worldPos).add(worldNormal.multiplyScalar(distance));
-            camTargetUp.copy(worldUp);
-
-            // --- 智能遮挡剔除 (Smart Occlusion Culling) ---
-            // 1. 先让所有卡片可见
-            albums.forEach(g => g.visible = true);
+            // REMOVED LOGIN CHECK HERE to allow direct interaction
             
-            // 2. 定义目标卡片上的关键检测点 (中心 + 四角)
-            // 卡片大小是 4x4, 我们检测稍微向内一点的范围(1.8)以防边缘误差
-            const checkPointsLocal = [
-                new THREE.Vector3(0, 0, 0),    // 中心
-                new THREE.Vector3(1.8, 1.8, 0),  // 右上
-                new THREE.Vector3(-1.8, 1.8, 0), // 左上
-                new THREE.Vector3(1.8, -1.8, 0), // 右下
-                new THREE.Vector3(-1.8, -1.8, 0) // 左下
-            ];
+            mouse.x=(cx/window.innerWidth)*2-1; mouse.y=-(cy/window.innerHeight)*2+1;
+            ray.setFromCamera(mouse, camera);
+            const hits = ray.intersectObjects(albums.map(g=>g.userData.innerMesh));
+            if(hits.length>0) {
+                const g = hits[0].object.parent.parent; 
+                const target = hits[0].object.parent;
+                if(!isFocused) focusOnAlbum(target);
+                else { if(target===focusedAlbum) toggleFlip(target); else { resetGlobalView(); focusOnAlbum(target); } }
+            } else if(isFocused) resetGlobalView();
+        }
 
-            // 3. 获取所有 Mesh 用于检测 (排除当前的)
-            const allMeshes = albums.map(g => g.userData.innerMesh);
-            const targetMesh = group.userData.innerMesh;
+        function toggleFlip(g) { g.userData.isFlipped=!g.userData.isFlipped; if(g.userData.overlayMesh) g.userData.overlayMesh.visible=g.userData.isFlipped; }
+        function resetFlip(g) { if(!g)return; g.userData.isFlipped=false; if(g.userData.overlayMesh) g.userData.overlayMesh.visible=false; g.userData.innerMesh.rotation.y=0; }
+        function resetGlobalView() {
+            if(focusedAlbum) resetFlip(focusedAlbum);
+            albums.forEach(g=>{ g.visible=true; g.userData.innerMesh.renderOrder=0; if(Array.isArray(g.userData.innerMesh.material)) g.userData.innerMesh.material.forEach(m=>m.depthTest=true); else g.userData.innerMesh.material.depthTest=true; });
+            isFocused=false; focusedAlbum=null; camT.set(0, DEFAULT_CAM_Y, DEFAULT_CAM_Z); camL.set(0,0,0); camUp.set(0,1,0); trX=0; trY=0;
+            audioManager.albumLabelEl.style.opacity='0'; audioManager.stop(); audioManager.hideButton(); audioManager.hideResonateButton();
+        }
+        function focusOnAlbum(g) {
+            isFocused=true; focusedAlbum=g; fRotX=0; fRotY=0;
+            
+            // --- 【重置聚焦状态变量】 ---
+            fDist = 8.0; 
+            fPan.set(0,0,0); 
 
-            // 4. 发射射线检测遮挡
-            const occlusionRaycaster = new THREE.Raycaster();
-            const blockers = new Set(); // 用 Set 存储被标记为遮挡的组(去重)
-
-            checkPointsLocal.forEach(localPoint => {
-                // 将局部坐标转为世界坐标
-                const targetPoint = localPoint.clone().applyMatrix4(targetMesh.matrixWorld);
-                
-                // 计算射线方向：从相机目标位置 -> 卡片上的点
-                const direction = new THREE.Vector3().subVectors(targetPoint, camTargetPos).normalize();
-                
-                // 设置射线：起点是相机目标位置
-                occlusionRaycaster.set(camTargetPos, direction);
-                
-                // 检测相交
-                // far 设置为到目标点的距离，稍微大一点点以容错，但不要射穿到后面去
-                occlusionRaycaster.far = camTargetPos.distanceTo(targetPoint) + 0.1;
-                
-                const intersects = occlusionRaycaster.intersectObjects(allMeshes);
-                
-                for (let hit of intersects) {
-                    // 如果射到了目标自己，说明这条线上没障碍了（或者穿过了障碍到了目标）
-                    // 这里的逻辑是：intersects 是按距离排序的
-                    // 如果第一个打到的不是目标，那就是遮挡物
-                    if (hit.object === targetMesh) {
-                        // 到了目标，这条射线检测结束
-                        break; 
-                    } else {
-                        // 打到了别的物体，这就是遮挡物！
-                        // 把它所属的 Group 加入黑名单
-                        blockers.add(hit.object.parent);
-                    }
-                }
+            const wp=new THREE.Vector3(); g.getWorldPosition(wp); const wq=new THREE.Quaternion(); g.getWorldQuaternion(wq);
+            const wn=new THREE.Vector3(0,0,1).applyQuaternion(wq), wu=new THREE.Vector3(0,1,0).applyQuaternion(wq);
+            camL.copy(wp); camT.copy(wp).add(wn.multiplyScalar(8.0)); camUp.copy(wu);
+            albums.forEach(x=>x.visible=true);
+            const cpts=[new THREE.Vector3(0,0,0), new THREE.Vector3(1.8,1.8,0), new THREE.Vector3(-1.8,1.8,0)];
+            const tMesh=g.userData.innerMesh; const blockers=new Set();
+            cpts.forEach(p=>{
+                const tp=p.clone().applyMatrix4(tMesh.matrixWorld); const dir=new THREE.Vector3().subVectors(tp, camT).normalize();
+                const rayOc=new THREE.Raycaster(camT, dir); rayOc.far=camT.distanceTo(tp)+0.1;
+                const hits=rayOc.intersectObjects(albums.map(a=>a.userData.innerMesh));
+                for(let h of hits) { if(h.object!==tMesh) blockers.add(h.object.parent); else break; }
             });
+            blockers.forEach(b=>b.visible=false);
+            const l=g.userData.labelText, inf=albumData[l]||{title:`ALBUM ${l}`,artist:`ARTIST ${g.userData.groupId}`};
+            audioManager.albumLabelEl.innerHTML=`${inf.title}<br><span>${inf.artist}</span>`;
+            audioManager.albumLabelEl.style.opacity='1'; // Fix label visibility
 
-            // 5. 隐藏所有遮挡物
-            blockers.forEach(g => g.visible = false);
-            // ----------------------------------------------------
-
-            const label = group.userData.labelText; 
-            const info = albumData[label] || { 
-                title: `ALBUM ${label}`, 
-                artist: `ARTIST No.${group.userData.groupId}` 
-            };
-
-            albumLabelEl.innerHTML = `${info.title}<br><span>${info.artist}</span>`;
-            albumLabelEl.style.opacity = '1';
-
-            if (group.userData.labelText === "12(0)") {
-                audioManager.load(group.userData.groupId);
-                audioManager.showButton();
+            // --- 【显示按钮（点击时检查登录状态）】 ---
+            audioManager.showResonateButton(g);
+            
+            // 检查是否有对应的音频文件
+            const trackSrc = TRACK_SOURCES[l];
+            if(trackSrc) { 
+                audioManager.load(trackSrc); 
+                audioManager.showButton(); 
             } else {
                 audioManager.hideButton();
             }
         }
 
-        // --- 监听器 ---
-        document.addEventListener('mousedown', onStart);
-        document.addEventListener('mouseup', onEnd);
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('wheel', onWheel, { passive: false }); 
-
-        document.addEventListener('touchstart', e => {
-            if (e.target.closest('#reset-btn') || e.target.closest('#play-pause-btn') || e.target.closest('#track-play-btn')) return;
-            onStart({ button: 0, clientX: e.touches[0].clientX, clientY: e.touches[0].clientY, preventDefault: () => {} });
-        }, {passive: false});
-        document.addEventListener('touchend', e => {
-             if (e.target.closest('#reset-btn') || e.target.closest('#play-pause-btn') || e.target.closest('#track-play-btn')) return;
-             const touch = e.changedTouches[0];
-             onEnd({ button: 0, clientX: touch.clientX, clientY: touch.clientY });
-        });
-        document.addEventListener('touchmove', e => {
-            if (e.target.closest('#reset-btn') || e.target.closest('#play-pause-btn') || e.target.closest('#track-play-btn')) return;
-            onMove({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY });
-            e.preventDefault();
-        }, {passive: false});
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+        window.addEventListener('resize', ()=>{ camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
 
         const clock = new THREE.Clock();
-        const currentLookAt = new THREE.Vector3(0, 0, 0);
-
         function animate() {
             requestAnimationFrame(animate);
-            const delta = clock.getDelta();
-
-            // 自动旋转逻辑：无人操作且未聚焦时
-            if (!isFocused && !isDragging && !isPanning && !isGlobalPaused) {
-                simulatedTime += delta;
-                
-                // 恢复自动旋转：仅在无人操作时自动旋转
-                targetRotationY += 0.0005; 
-                targetRotationX += 0.0002;
+            if (introPhase < 3) {
+                updateIntro();
+                renderer.render(scene, camera);
+                return; 
             }
-            particleMaterial.uniforms.uTime.value = simulatedTime;
+            updateIntro(); 
+            const dt = clock.getDelta();
+            
+            // Check if UI overlay is active to pause interaction
+            const isUIActive = document.getElementById('overlay-container').classList.contains('active');
 
-            // --- 粒子透明度渐变 ---
-            currentGlobalAlpha += (targetGlobalAlpha - currentGlobalAlpha) * 0.05;
-            particleMaterial.uniforms.uGlobalAlpha.value = currentGlobalAlpha;
-
-            albums.forEach((group) => {
-                // 如果不可见，为了性能可以跳过大部分逻辑，但位置计算仍需保持同步
-                // 为了简单，我们只跳过渲染相关的更新，位置逻辑保持
-                const mesh = group.userData.innerMesh;
+            // REMOVED LOGIN CHECK HERE: Auto-rotation and time update now happen always when not focused/dragging
+            // Also check !isUIActive to stop movement when UI is open
+            if(!isFocused && !isDrag && !isPan && !isPaused && !isUIActive) { 
+                simTime+=dt; 
+                trY+=0.0005; 
+                trX+=0.0002; 
+            }
+            
+            particleMaterial.uniforms.uTime.value=simTime;
+            albums.forEach(g=>{
+                const m=g.userData.innerMesh;
                 
-                // 如果未暂停，更新专辑位置
-                if (!isFocused && !isDragging && !isPanning && !isGlobalPaused) {
-                    group.userData.u += delta * 0.15; 
-                }
-                if (group.userData.u > Math.PI * 4) group.userData.u -= Math.PI * 4;
-
-                const u = group.userData.u;
-                const v = group.userData.offsetY; 
-
-                const pos = getMobiusPosition(u, v); 
-                const lookAtPos = getMobiusPosition(u + 0.1, v);
-
-                group.position.copy(pos);
-                group.lookAt(lookAtPos);
-                group.rotateY(Math.PI / 2); 
-                group.rotateX(u * 0.5); 
-                
-                if (group.userData.posIndex % 2 === 1) {
-                    group.rotateX(Math.PI); 
+                // REMOVED LOGIN CHECK HERE: Albums rotate along the Mobius strip always
+                if(!isFocused && !isDrag && !isPan && !isPaused && !isUIActive) { 
+                    g.userData.u+=dt*0.15; 
+                    if(g.userData.u>Math.PI*4) g.userData.u-=Math.PI*4; 
                 }
                 
-                const targetFlip = group.userData.isFlipped ? Math.PI : 0;
-                const currentRot = mesh.rotation.y;
-                mesh.rotation.y += (targetFlip - currentRot) * 0.1;
-                
-                if (!group.userData.isFlipped && Math.abs(mesh.rotation.y) < 0.1) {
-                    if (Array.isArray(mesh.material) && mesh.material[5] !== group.userData.originalMaterial) {
-                        mesh.material[5] = group.userData.originalMaterial;
-                    }
-                }
-
-                let targetScale = 1.0; 
-                if (isFocused) {
-                    if (group === focusedAlbum) {
-                        targetScale = 1.2; 
-                    } else {
-                        targetScale = 0.8; 
-                    }
-                }
-                group.userData.currentScale += (targetScale - group.userData.currentScale) * 0.1;
-                group.scale.setScalar(group.userData.currentScale);
-
-                group.updateMatrixWorld();
+                const pos=getMobiusPos(g.userData.u, g.userData.offsetY), look=getMobiusPos(g.userData.u+0.1, g.userData.offsetY);
+                g.position.copy(pos); g.lookAt(look); g.rotateY(Math.PI/2); g.rotateX(g.userData.u*0.5);
+                if(g.userData.posIndex%2===1) g.rotateX(Math.PI);
+                const tf=g.userData.isFlipped?Math.PI:0; m.rotation.y+=(tf-m.rotation.y)*0.1;
+                let ts=1.0; if(isFocused) ts=(g===focusedAlbum)?1.2:0.8; 
+                g.userData.currentScale+=(ts-g.userData.currentScale)*0.1; g.scale.setScalar(g.userData.currentScale);
+                g.updateMatrixWorld();
             });
-
-            if (!isFocused) {
-                // 非聚焦模式：使用全局旋转
-                const sceneRotY = THREE.MathUtils.lerp(scene.rotation.y, targetRotationY, 0.05);
-                const sceneRotX = THREE.MathUtils.lerp(scene.rotation.x, targetRotationX, 0.05);
-                scene.rotation.y = sceneRotY;
-                scene.rotation.x = sceneRotX;
-
-                // 简单的视差
-                camera.position.lerp(camTargetPos, 0.05);
-                currentLookAt.lerp(camLookAtPos, 0.05);
-                camera.lookAt(currentLookAt);
-                camera.up.lerp(camTargetUp, 0.05);
+            if(!isFocused) {
+                scene.rotation.y = THREE.MathUtils.lerp(scene.rotation.y, trY, 0.05);
+                scene.rotation.x = THREE.MathUtils.lerp(scene.rotation.x, trX, 0.05);
+                camera.position.lerp(camT, 0.05); camera.lookAt(camL); camera.up.lerp(camUp, 0.05);
+                if(!isPan && !isUIActive) { camera.position.x+=(mX*5-(camera.position.x-camT.x))*0.01; camera.position.y+=(mY*5-(camera.position.y-camT.y))*0.01; }
+            } else if(focusedAlbum) {
+                const wp=new THREE.Vector3(); focusedAlbum.getWorldPosition(wp);
+                const wq=new THREE.Quaternion(); focusedAlbum.getWorldQuaternion(wq);
                 
-                if (!isPanning) {
-                     camera.position.x += (mouseX * 5 - (camera.position.x - camTargetPos.x)) * 0.01;
-                     camera.position.y += (mouseY * 5 - (camera.position.y - camTargetPos.y)) * 0.01;
-                }
-            } else {
-                // 聚焦模式：实时计算轨道摄像机位置
-                if (focusedAlbum) {
-                    
-                    const worldPos = new THREE.Vector3();
-                    focusedAlbum.getWorldPosition(worldPos);
+                // --- 【计算聚焦状态下的平移和缩放】 ---
+                const viewRot = new THREE.Euler(fRotX, fRotY, 0, 'YXZ');
+                const panVec = new THREE.Vector3(-fPan.x, fPan.y, 0); // 平移偏移
+                panVec.applyEuler(viewRot);
+                panVec.applyQuaternion(wq);
+                const targetFocus = wp.clone().add(panVec); // 目标注视点
 
-                    const worldQuat = new THREE.Quaternion();
-                    focusedAlbum.getWorldQuaternion(worldQuat);
+                const distVec = new THREE.Vector3(0, 0, fDist); // 缩放距离
+                distVec.applyEuler(viewRot);
+                distVec.applyQuaternion(wq);
+                const targetCamPos = targetFocus.clone().add(distVec); // 目标相机位置
 
-                    // 计算轨道偏移
-                    // 初始偏移是 (0, 0, 8)，即正前方
-                    const offset = new THREE.Vector3(0, 0, 8);
-                    
-                    // 应用用户控制的旋转 (focusRotX, focusRotY)
-                    // 这里使用欧拉角旋转向量，模拟云台
-                    // 先绕X轴(上下)，再绕Y轴(左右)
-                    offset.applyEuler(new THREE.Euler(focusRotX, focusRotY, 0, 'YXZ'));
-                    
-                    // 将局部偏移转换到卡片的世界空间方向
-                    offset.applyQuaternion(worldQuat);
-
-                    const targetPos = worldPos.clone().add(offset);
-                    const targetUp = new THREE.Vector3(0, 1, 0).applyQuaternion(worldQuat); // 卡片的上方
-
-                    // 平滑移动摄像机
-                    camera.position.lerp(targetPos, 0.1);
-                    camera.lookAt(worldPos); // 始终看向卡片中心
-                    camera.up.lerp(targetUp, 0.1);
-                }
+                const tu=new THREE.Vector3(0,1,0).applyQuaternion(wq);
+                
+                camera.position.lerp(targetCamPos, 0.1); 
+                camera.lookAt(targetFocus); 
+                camera.up.lerp(tu, 0.1);
             }
-
             renderer.render(scene, camera);
         }
-
         animate();
-
     </script>
 </body>
 </html>
