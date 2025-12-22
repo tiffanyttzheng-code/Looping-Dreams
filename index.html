@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>莫比乌斯电台</title>
+    <title>Möbius Radio</title>
     <style>
         body {
             margin: 0;
@@ -129,20 +129,37 @@
             text-transform: uppercase;
             opacity: 0; 
             transition: opacity 0.5s ease;
-            pointer-events: none;
+            pointer-events: none; /* Container ignores events */
             text-shadow: 0 2px 10px rgba(0,0,0,0.8);
             text-align: center;
             width: 80%;
+            max-width: 600px;
         }
         
-        #album-label span {
+        #album-title-text {
             display: block;
-            font-size: 14px;
-            opacity: 0.7;
-            margin-top: 8px;
-            letter-spacing: 2px;
+        }
+
+        /* --- 【参数调整区：放大后下方文字样式】 --- */
+        #album-artist-text {
+            display: block;
+            margin-top: 8px; /* 第一行与第二行的间距 */
             font-weight: normal;
         }
+
+        .artist-name {
+            font-size: 14px;      /* 歌手名字体大小 */
+            opacity: 0.9;         /* 歌手名透明度 */
+            letter-spacing: 2px;
+        }
+
+        .album-year {
+            font-size: 12px;      /* 年份字体大小 */
+            opacity: 0.6;         /* 年份透明度 */
+            margin-left: 15px;    /* 调整歌手名与年份之间的距离 */
+            letter-spacing: 1px;
+        }
+        /* ------------------------------------- */
 
         #resonance-meter {
             display: block;
@@ -152,11 +169,130 @@
             letter-spacing: 2px;
             text-shadow: 0 0 5px #00ffcc;
         }
+        
+        /* ================================================================
+           【参数修改区：背景圆角矩形 (Wrapper)】 
+           这是底部的半透明背景块，与进度条功能解耦。
+           ================================================================
+        */
+        #main-progress-wrapper {
+            /* 1. 位置调整 (上 右 下 左) */
+            margin: 20px auto 0 auto; 
 
+            /* 2. 尺寸调整 */
+            width: 340px;  
+            height: 40px;  
+
+            /* 3. 圆角与背景 */
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.1); 
+            backdrop-filter: blur(5px);
+
+            /* --- 交互与显示状态 --- */
+            display: flex; /* 保持 flex 布局以确保内容居中 */
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto; /* 关键：阻挡点击穿透 */
+            cursor: default;      
+            
+            /* 状态控制：使用 visibility 和 opacity 实现淡入淡出 */
+            visibility: hidden; 
+            opacity: 0; 
+            transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+        }
+        #main-progress-wrapper:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        #main-progress-wrapper.active {
+            visibility: visible;
+            opacity: 1; /* 播放后淡入 */
+        }
+
+        /* ================================================================
+           【参数修改区：进度条本体 (Container)】 
+           这是实际的进度条线条区域，位于背景矩形内部。
+           ================================================================
+        */
+        #progress-container {
+            /* 1. 尺寸 (宽度应小于 Wrapper 宽度) */
+            width: 280px; 
+            height: 20px; /* 点击热区高度，建议保持以便抓取 */
+
+            /* --- 交互属性 --- */
+            position: relative;
+            cursor: pointer;
+            pointer-events: auto; /* 允许拖动 */
+            /* Z-index 确保在 Wrapper 之上 */
+            z-index: 101; 
+        }
+
+        /* 进度条背景线 (浅灰色) */
+        .progress-bg {
+            position: absolute;
+            top: 9px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 1px;
+            pointer-events: none;
+        }
+
+        /* 进度条填充线 (白色，加粗) */
+        .progress-fill {
+            position: absolute;
+            top: 8.5px;
+            left: 0;
+            width: 0%;
+            height: 3px;
+            background-color: #fff;
+            border-radius: 1.5px;
+            pointer-events: none;
+        }
+
+        /* 小圆点 */
+        .progress-knob {
+            position: absolute;
+            top: 6px;
+            left: 0%;
+            width: 8px;
+            height: 8px;
+            background-color: #fff;
+            border-radius: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+            pointer-events: none;
+        }
+
+        /* 时间提示 Tooltip */
+        .progress-tooltip {
+            position: absolute;
+            top: -25px; 
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 2px 6px;
+            border-radius: 3px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+            letter-spacing: 1px;
+        }
+
+        /* 鼠标悬停在Wrapper时显示 Tooltip */
+        #main-progress-wrapper:hover .progress-tooltip {
+            opacity: 1;
+        }
+
+        /* --- 【参数调整】左上角按钮 (Reset / PlayPause) --- */
         .control-btn {
             position: absolute;
-            width: 44px;
-            height: 44px;
+            /* 外圈圆大小 */
+            width: 44px; 
+            height: 44px; 
             z-index: 10;
             cursor: pointer;
             opacity: 0.7;
@@ -176,10 +312,25 @@
             opacity: 1.0;
             background: rgba(255, 255, 255, 0.1);
         }
+        
+        .control-btn svg {
+            /* 线条图标大小 */
+            width: 28px; 
+            height: 28px; 
+            
+            fill: none;
+            stroke: #fff;
+            
+            /* 线条粗细 */
+            stroke-width: 1.8; 
+            
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
 
         #reset-btn { top: 40px; left: 40px; }
         #reset-btn:hover { transform: rotate(-90deg); }
-        #play-pause-btn { top: 100px; left: 40px; }
+        #play-pause-btn { top: 110px; left: 40px; }
         #play-pause-btn:hover { transform: scale(1.1); }
 
         /* =================== 按钮位置修改区 =================== */
@@ -226,7 +377,7 @@
         /* ==================================================== */
 
         .action-icon { width: 14px; height: 14px; fill: #00ffcc; stroke: none; } 
-        #track-play-btn svg, .control-btn svg {
+        #track-play-btn svg {
             width: 14px; height: 14px; fill: none; stroke: #fff; 
             stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
         }
@@ -247,6 +398,216 @@
             opacity: 0.9;
         }
 
+        /* --- 迷你播放器 (Mini Player) --- */
+        #mini-player {
+            position: fixed;
+            top: 50%;
+            left: -300px; /* Initially hidden */
+            transform: translateY(-50%);
+            width: 200px; /* 增加宽度以容纳横向布局 */
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            z-index: 50;
+            transition: left 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* 左对齐 */
+            pointer-events: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        #mini-player.active {
+            left: 40px;
+        }
+        /* 折叠状态：隐藏主体，只露右侧边栏 */
+        #mini-player.collapsed {
+            left: -230px; /* Body width + padding offset */
+        }
+        
+        #mini-player img {
+            width: 100%;
+            aspect-ratio: 1/1;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            background-color: #222;
+        }
+        
+        #mini-player .info {
+            width: 100%;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        #mini-player .title {
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #mini-player .artist {
+            color: #888;
+            font-size: 10px;
+            letter-spacing: 1px;
+        }
+
+        /* 底部控制行：进度条 + 播放按钮 */
+        .mini-bottom-row {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            gap: 12px;
+            margin-top: auto;
+        }
+
+        /* Mini Progress Bar */
+        .mini-progress {
+            flex-grow: 1; /* 占据剩余空间 */
+            height: 15px; /* 增加热区高度方便拖拽 */
+            margin: 0;
+            opacity: 0.9;
+            cursor: pointer;
+            position: relative;
+            pointer-events: auto;
+        }
+        /* 视觉上线条居中 */
+        .mini-progress .progress-bg { top: 7px; pointer-events: none; }
+        .mini-progress .progress-fill { top: 6.5px; pointer-events: none; }
+        .mini-progress .progress-knob { top: 4px; width: 6px; height: 6px; pointer-events: none; }
+        /* Tooltip for Mini Player (New) */
+        .mini-progress .progress-tooltip { 
+            display: block; 
+            top: -25px; /* Same relative positioning */
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 2px 5px;
+            border-radius: 3px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+            letter-spacing: 1px;
+            position: absolute;
+        }
+        .mini-progress:hover .progress-tooltip {
+            opacity: 1;
+        }
+
+        /* Mini Play/Pause Button */
+        #mini-pause-btn {
+            width: 28px; /* Slightly larger than before for better touch */
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+        #mini-pause-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+        #mini-pause-btn svg {
+            width: 12px;
+            height: 12px;
+            fill: #fff;
+            stroke: none;
+        }
+
+        /* --- 右侧悬浮侧边栏 (关闭 + 折叠) --- */
+        .mini-sidebar {
+            position: absolute;
+            right: -24px; /* Attach to right edge outside */
+            top: 0;
+            bottom: 0;
+            width: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px; /* Space between buttons */
+            z-index: 51;
+        }
+
+        /* 关闭按钮 (右上角对齐) - 移除红色描边 */
+        #mini-close-btn {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.6); /* 半透明黑底 */
+            border: 1px solid rgba(255, 255, 255, 0.2); /* 恢复白色描边 */
+            border-top-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+            transition: all 0.2s;
+            position: absolute;
+            top: 15px; /* Align with top */
+            right: 0;
+        }
+        /* 折叠后隐藏关闭按钮 */
+        #mini-player.collapsed #mini-close-btn {
+            display: none;
+        }
+        #mini-close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: #fff;
+        }
+        #mini-close-btn svg {
+            width: 12px;
+            height: 12px;
+            stroke: #fff;
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+        }
+
+        /* 侧边折叠箭头 (正下方) */
+        #mini-toggle-btn {
+            width: 24px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-left: none;
+            border-top-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+            position: absolute;
+            top: 50px; /* Below close button */
+            right: 0;
+        }
+        /* 钝角三角形绘制 */
+        #mini-toggle-arrow {
+            width: 0; 
+            height: 0; 
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            /* 默认状态：箭头向左 (收起) */
+            border-right: 6px solid rgba(255, 255, 255, 0.9); 
+            transition: transform 0.3s;
+        }
+        /* 折叠状态下，箭头翻转 (展开) */
+        #mini-player.collapsed #mini-toggle-arrow {
+            transform: rotate(180deg);
+        }
+
         /* --- 弹窗样式调整 --- */
         #overlay-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -256,14 +617,12 @@
             justify-content: center; 
             align-items: center; 
             color: #fff;
-            /* 恢复 auto，阻止点击穿透到 3D 场景，同时捕获点击以关闭弹窗 */
             pointer-events: auto; 
         }
         #overlay-container.active { 
             display: flex; 
         }
         
-        /* 移除关闭按钮 */
         .close-overlay { display: none; }
         
         /* 模态框样式 */
@@ -271,9 +630,7 @@
             width: 380px; padding: 40px; background: rgba(20, 20, 20, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.8); text-align: center; display: none;
-            /* 确保模态框内容可点击 */
             pointer-events: auto; 
-            /* 初始状态 */
             opacity: 0;
             transform: translateY(-20px);
             animation: slideIn 0.3s forwards;
@@ -285,7 +642,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 离开动画 */
         @keyframes slideDownOut {
             from { opacity: 1; transform: translateY(0); }
             to { opacity: 0; transform: translateY(50px); }
@@ -320,11 +676,35 @@
         .section-title { text-align: left; font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
         
         /* 颜色选择器 */
-        .color-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin: 15px 0; }
+        .color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 15px 0; }
         .color-swatch { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s, box-shadow 0.2s; }
         .color-swatch:hover { transform: scale(1.1); }
         .color-swatch.selected { border-color: #fff; box-shadow: 0 0 10px #fff; transform: scale(1.1); }
         
+        /* Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            margin-top: -5px; 
+            box-shadow: 0 0 5px rgba(255,255,255,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+        }
+
         /* 规则文本 */
         .rules-text { font-size: 10px; color: #aaa; text-align: left; margin: 15px 0; border-left: 2px solid #555; padding-left: 10px; line-height: 1.5; }
         
@@ -417,6 +797,41 @@
         </div>
     </div>
 
+    <!-- Mini Player Container -->
+    <div id="mini-player">
+        <!-- Sidebar for Close & Toggle -->
+        <div class="mini-sidebar">
+             <div id="mini-close-btn" title="Close">
+                 <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+             </div>
+             <div id="mini-toggle-btn" title="Toggle">
+                 <div id="mini-toggle-arrow"></div>
+             </div>
+        </div>
+
+        <img src="" alt="Album Cover" onerror="this.style.backgroundColor='#333'">
+        <div class="info">
+            <div class="title">Album Title</div>
+            <div class="artist">Artist</div>
+        </div>
+        
+        <!-- Bottom Row: Progress & Play Button -->
+        <div class="mini-bottom-row">
+            <div id="mini-progress-container" class="progress-container mini-progress active">
+                 <div class="progress-bg"></div>
+                 <div class="progress-fill"></div>
+                 <div class="progress-knob"></div>
+                 <div class="progress-tooltip">0:00 / 0:00</div>
+            </div>
+            
+            <div class="mini-btn" id="mini-pause-btn" title="Pause">
+                <svg viewBox="0 0 24 24">
+                    <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
     <div id="overlay-container">
         <!-- Close button removed -->
         <div class="modal-box" id="modal-login">
@@ -459,19 +874,26 @@
             </div>
 
             <!-- Color Picker -->
-            <div class="section-title" style="margin-top: 15px;">Resonance Color (Choose 1)</div>
+            <div class="section-title" style="margin-top: 15px;">共鸣颜色 (选择1个)</div>
             <div id="color-picker" class="color-grid">
                 <!-- Colors injected by JS -->
+            </div>
+
+            <!-- Blink Speed Slider -->
+            <div class="section-title" style="margin-top: 15px;">闪烁速度</div>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+                <span style="font-size:10px; color:#888;">0</span>
+                <input type="range" id="blink-speed-slider" min="0" max="100" value="50" oninput="window.userSystem.setBlinkSpeed(this.value)">
+                <span style="font-size:10px; color:#888;">100</span>
             </div>
 
             <!-- Rules -->
             <div class="rules-text">
                 <strong>共鸣规则 / Rules:</strong><br>
                 每个用户最多可以在每张专辑上增加五次共鸣。<br>
-                Each user can add up to 5 resonances per album.
             </div>
             
-            <div class="section-title">Memory Log</div>
+            <div class="section-title">记忆日志</div>
             <div class="resonance-list" id="resonance-list">
                 <div style="padding:10px; color:#666; text-align:center;">No resonance data yet.</div>
             </div>
@@ -505,19 +927,29 @@
     </div>
 
     <div id="album-label">
-        ALBUM TITLE
-        <span>ARTIST NAME</span>
-        <span id="resonance-meter">SIGNAL: 0%</span>
+        <div id="album-title-text">ALBUM TITLE</div>
+        <div id="album-artist-text">ARTIST NAME</div>
+        <!-- 移除了 SIGNAL 行 -->
+        
+        <!-- 新增: 主界面进度条包裹区域 (Clickable Area) -->
+        <div id="main-progress-wrapper" class="ui-element" onclick="event.stopPropagation()">
+            <div id="progress-container" class="progress-container">
+                <div class="progress-bg"></div>
+                <div class="progress-fill"></div>
+                <div class="progress-knob"></div>
+                <div class="progress-tooltip">0:00 / 0:00</div>
+            </div>
+        </div>
     </div>
 
     <div id="ui-layer" class="ui-element">
         <img id="ui-title-img" src="assets/intro_title.png" alt="Title">
         <p>We are destined to meet again.</p>
         <div class="instruction">
-            L-CLICK DRAG TO ROTATE<br>
-            M-CLICK DRAG TO PAN<br>
-            SCROLL TO ZOOM<br>
-            CLICK TO FOCUS & FLIP
+            左键拖动旋转<br>
+            中键拖动平移<br>
+            滚轮缩放<br>
+            点击聚焦与翻转
         </div>
         <div id="login-hint">登录以解锁更多功能</div>
     </div>
@@ -635,24 +1067,24 @@
         let auth = null;
         let isOfflineMode = false;
 
-        // 12 Colors Palette (Pink/Purple/Pastel)
+        // 12 New High Saturation Colors
         const PARTICLE_COLORS = [
-            '#FFDDE1', // Pastel Pink
-            '#FBD0D5', // Light Rose
-            '#F8C3C9', // Soft Pink
-            '#F4B6BE', // Cherry Blossom
-            '#F1A9B2', // Flamingo
-            '#EE9CA7', // Salmon Pink
-            '#F6F3FF', // Pale Lavender
-            '#E5DEF5', // Light Lilac
-            '#D4C9EC', // Thistle
-            '#C3B5E3', // Wisteria
-            '#B2A0DA', // Soft Purple
-            '#A18CD1'  // Lavender
+            '#FF0055', // Radical Red
+            '#FF5500', // International Orange
+            '#FFD500', // Cyber Yellow
+            '#A6FF00', // Spring Bud
+            '#00FF55', // Malachite
+            '#00FFD5', // Bright Turquoise
+            '#00A6FF', // Dodger Blue
+            '#002AFF', // Blue
+            '#7B00FF', // Electric Violet
+            '#D400FF', // Phlox
+            '#FF00D4', // Shocking Pink
+            '#FFFFFF'  // White
         ];
 
         window.userSystem = {
-            isLoggedIn: false, username: null, resonatedList: [], userColor: '#ffffff',
+            isLoggedIn: false, username: null, resonatedList: [], userColor: '#ffffff', userBlinkSpeed: 50,
             init: function() {
                 if (firebaseConfig) {
                     const app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app);
@@ -672,14 +1104,14 @@
                 if (isOfflineMode) {
                     let localDB = JSON.parse(localStorage.getItem('mobius_users') || '{}');
                     if (localDB[u]) { msg.textContent = "Username taken."; return; }
-                    localDB[u] = { password: p, resonated: [], color: defColor };
+                    localDB[u] = { password: p, resonated: [], color: defColor, blinkSpeed: 50 };
                     localStorage.setItem('mobius_users', JSON.stringify(localDB));
                     alert("Registered!"); uiManager.switchModal('login'); return;
                 }
                 try {
                     const ref = doc(db, 'artifacts', appId, 'public', 'data', 'user_accounts', u);
                     if ((await getDoc(ref)).exists()) { msg.textContent = "Username exists."; return; }
-                    await setDoc(ref, { password: p, resonated: [], color: defColor });
+                    await setDoc(ref, { password: p, resonated: [], color: defColor, blinkSpeed: 50 });
                     alert("Registered!"); uiManager.switchModal('login');
                 } catch (e) { msg.textContent = "Error: " + e.message; }
             },
@@ -697,6 +1129,7 @@
                     this.isLoggedIn = true; this.username = u; 
                     this.resonatedList = userData.resonated || [];
                     this.userColor = userData.color || PARTICLE_COLORS[0];
+                    this.userBlinkSpeed = userData.blinkSpeed !== undefined ? userData.blinkSpeed : 50;
                     this.onLoginSuccess();
                 } else msg.textContent = "Invalid Credentials";
             },
@@ -716,17 +1149,17 @@
                 document.getElementById('login-hint').style.display = 'none'; 
                 alert("Welcome " + this.username); 
             },
-            // Sync user data to local storage/db
             saveData: async function() {
                 if (isOfflineMode) {
                     let localDB = JSON.parse(localStorage.getItem('mobius_users') || '{}');
                     if (localDB[this.username]) {
                         localDB[this.username].resonated = this.resonatedList;
                         localDB[this.username].color = this.userColor;
+                        localDB[this.username].blinkSpeed = this.userBlinkSpeed;
                         localStorage.setItem('mobius_users', JSON.stringify(localDB));
                     }
                 } else {
-                    try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'user_accounts', this.username), { resonated: this.resonatedList, color: this.userColor }, { merge: true }); } catch(e) {}
+                    try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'user_accounts', this.username), { resonated: this.resonatedList, color: this.userColor, blinkSpeed: this.userBlinkSpeed }, { merge: true }); } catch(e) {}
                 }
             },
             addResonance: function(title, artist) {
@@ -772,29 +1205,22 @@
                 this.syncVisuals(); // Update all particle colors immediately
                 uiManager.updateProfileUI();
             },
-            // Sync logic to update 3D scene based on user data
+            setBlinkSpeed: function(speed) {
+                this.userBlinkSpeed = parseInt(speed);
+                this.saveData();
+            },
             syncVisuals: function() {
                 if (!this.isLoggedIn) return;
-                // Update 3D scene
-                const albums = window.albums || []; // Global ref
+                const albums = window.albums || [];
                 albums.forEach(g => {
                     const title = g.userData.labelText;
                     const item = this.resonatedList.find(i => i.album === title);
                     const count = item ? item.count : 0;
-                    
-                    // Sync local clicks
                     g.userData.localClicks = count;
-                    
-                    // Sync particles count
                     let pCount = 0;
                     if (count > 0) {
-                        pCount = 200 * Math.pow(2, count - 1); // Using REVISED formula logic: Base * 2^(n-1) approx to multiplier logic
-                        // Actually use exact logic: base, base*2, base*4... based on prompt "multiplier = 2"
-                        // Or simple iterative logic
-                        pCount = 200; 
-                        for(let k=1; k<count; k++) pCount = Math.floor(pCount * 2);
+                        pCount = 200 * Math.pow(2, count - 1);
                     }
-                    
                     g.userData.currentParticleCount = pCount;
                     if (pCount > 0) {
                         updateResonanceGeometry(g.userData.resonanceParticles, pCount);
@@ -808,10 +1234,9 @@
         };
         window.userSystem.init();
 
-        // Expose PARTICLE_COLORS for UI
         window.PARTICLE_COLORS = PARTICLE_COLORS;
     </script>
-
+    
     <script>
         const uiManager = {
             overlay: document.getElementById('overlay-container'),
@@ -825,7 +1250,7 @@
                     setTimeout(() => {
                         activeModal.classList.remove('closing');
                         overlay.classList.remove('active');
-                    }, 300); // Match animation duration
+                    }, 300);
                 } else {
                     overlay.classList.remove('active');
                 }
@@ -845,19 +1270,19 @@
             updateProfileUI: function() {
                 document.getElementById('profile-id').textContent = window.userSystem.username;
                 
-                // Color selection visual
                 const swatches = document.querySelectorAll('.color-swatch');
                 swatches.forEach(s => {
                     if (rgbToHex(s.style.backgroundColor).toUpperCase() === window.userSystem.userColor.toUpperCase()) s.classList.add('selected');
                     else s.classList.remove('selected');
                 });
                 
-                // List
+                const slider = document.getElementById('blink-speed-slider');
+                if(slider) slider.value = window.userSystem.userBlinkSpeed;
+
                 const list = window.userSystem.resonatedList;
                 document.getElementById('resonance-list').innerHTML = list.length === 0 ? 
                     '<div style="padding:10px; color:#666; text-align:center;">No resonance data yet.</div>' : 
                     list.map(item => {
-                        // Find the real title from albumData using the ID key
                         const info = albumData[item.album] || { title: item.album, artist: item.artist };
                         return `
                         <div class="resonance-item">
@@ -873,7 +1298,6 @@
             }
         };
 
-        // Helper
         function rgbToHex(rgb) {
             if (rgb.startsWith('#')) return rgb;
             const sep = rgb.indexOf(",") > -1 ? "," : " ";
@@ -883,15 +1307,13 @@
             return "#" + r + g + b;
         }
 
-        // Close overlay when clicking background
         document.getElementById('overlay-container').onclick = (e) => {
             if (e.target === e.currentTarget) {
                 uiManager.closeOverlay();
             }
         };
-
+        
         document.getElementById('user-icon-btn').onclick = () => uiManager.openOverlay();
-        // document.getElementById('btn-close-overlay').onclick = () => uiManager.closeOverlay(); // Removed
         document.getElementById('btn-login').onclick = () => { const u = document.getElementById('login-username').value; const p = document.getElementById('login-password').value; if(u && p) window.userSystem.login(u, p); };
         document.getElementById('btn-register').onclick = () => {
             const u = document.getElementById('reg-username').value.trim(); const p = document.getElementById('reg-password').value; const pc = document.getElementById('reg-confirm').value;
@@ -900,31 +1322,31 @@
             window.userSystem.register(u, p);
         };
         document.getElementById('btn-logout').onclick = () => window.userSystem.logout();
-
-        const USE_LOCAL_ASSETS = true; // CHANGED FOR LOCAL
         
-        // Use placeholder data URI for intro to prevent 404s in preview
+        const USE_LOCAL_ASSETS = true; 
+        
         const placeholderRadio = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
         const INTRO_RADIO_PATH = 'assets/intro_radio.png'; 
         const INTRO_TITLE_PATH = 'assets/intro_title.png'; 
 
-        // ================= 配置调整区域 =================
-        // 修改以下数值即可调整开屏图片的位置和缩放
-        const RADIO_SCALE = 1.0;  // 收音机缩放倍数
-        const RADIO_Y = -10;      // 收音机垂直位置
-        const TITLE_SCALE = 0.6;  // 标题缩放倍数
-        const TITLE_Y = 5;        // 标题垂直位置
-        const TITLE_Z = 0.1;      // 标题前后深度
+        const RADIO_SCALE = 1.0; 
+        const RADIO_Y = -10;
+        const TITLE_SCALE = 0.6;
+        const TITLE_Y = 5;
+        const TITLE_Z = 0.1;
         
-        // 【共鸣粒子参数】(RESONANCE PARTICLES)
-        const RESONANCE_MAX_CLICKS = 5;       // 每个用户最大共鸣次数
-        const RESONANCE_MULTIPLIER = 2;       // 每次共鸣粒子增加的倍数
-        const RESONANCE_BASE_COUNT = 200;     // 第一次点击产生的粒子基数
-        const RESONANCE_SPREAD = 15.0;        // 粒子扩散范围 (数值越小越集中在专辑附近)
-        const RESONANCE_MIN_RADIUS = 3.5;     // 新增：粒子生成的最小半径，避免遮挡卡片
-        // ===============================================
-
-        const albumData = { "1(-7)": { title: "迷", artist: "王菲" }, "1(-6)": { title: "天空", artist: "王菲" }, "1(-5)": { title: "菲靡靡之音", artist: "王菲" }, "1(-4)": { title: "浮躁", artist: "王菲" }, "1(-3)": { title: "王菲", artist: "王菲" }, "1(-2)": { title: "唱游", artist: "王菲" }, "1(-1)": { title: "只爱陌生人", artist: "王菲" }, "1(0)": { title: "寓言", artist: "王菲" }, "1(1)": { title: "王菲", artist: "王菲" }, "1(2)": { title: "将爱", artist: "王菲" }, "2(-5)": { title: "宠爱", artist: "张国荣" }, "2(-4)": { title: "红", artist: "张国荣" }, "2(-3)": { title: "这些年来", artist: "张国荣" }, "2(-2)": { title: "Printemps", artist: "张国荣" }, "2(-1)": { title: "陪你倒数", artist: "张国荣" }, "2(0)": { title: "大热", artist: "张国荣" }, "2(1)": { title: "untitled", artist: "张国荣" }, "2(2)": { title: "forever", artist: "张国荣" }, "2(3)": { title: "crossover", artist: "张国荣" }, "2(4)": { title: "一切随风", artist: "张国荣" }, "3(-7)": { title: "爱上一个不回家的人", artist: "林忆莲" }, "3(-6)": { title: "倾斜城市", artist: "林忆莲" }, "3(-5)": { title: "open up", artist: "林忆莲" }, "3(-4)": { title: "爱是唯一", artist: "林忆莲" }, "3(-3)": { title: "夜太黑", artist: "林忆莲" }, "3(-2)": { title: "美妙世界", artist: "林忆莲" }, "3(-1)": { title: "铿锵玫瑰", artist: "林忆莲" }, "3(0)": { title: "林忆莲's", artist: "林忆莲" }, "3(1)": { title: "原来…", artist: "林忆莲" }, "3(2)": { title: "2001莲", artist: "林忆莲" }, "3(3)": { title: "Encore", artist: "林忆莲" }, "3(4)": { title: "本色", artist: "林忆莲" }, "4(-6)": { title: "情敌贝多芬", artist: "王力宏" }, "4(-5)": { title: "如果你听见我的歌", artist: "王力宏" }, "4(-4)": { title: "好想你", artist: "王力宏" }, "4(-3)": { title: "白纸", artist: "王力宏" }, "4(-2)": { title: "公转自转", artist: "王力宏" }, "4(-1)": { title: "不可能错过你", artist: "王力宏" }, "4(0)": { title: "永远的第一天", artist: "王力宏" }, "4(1)": { title: "唯一", artist: "王力宏" }, "4(2)": { title: "不可思议", artist: "王力宏" }, "4(3)": { title: "心中的日月", artist: "王力宏" }, "5(-1)": { title: "David Tao", artist: "陶喆" }, "5(0)": { title: "I'm OK", artist: "陶喆" }, "5(1)": { title: "黑色柳丁", artist: "陶喆" }, "5(2)": { title: "太平盛世", artist: "陶喆" }, "5(3)": { title: "太美丽", artist: "陶喆" }, "5(4)": { title: "69乐章", artist: "陶喆" }, "6(-7)": { title: "梦想", artist: "张信哲" }, "6(-6)": { title: "思念", artist: "张信哲" }, "6(-5)": { title: "挚爱", artist: "张信哲" }, "6(-4)": { title: "直觉", artist: "张信哲" }, "6(-3)": { title: "选哲", artist: "张信哲" }, "6(-2)": { title: "到处留情", artist: "张信哲" }, "6(-1)": { title: "回来", artist: "张信哲" }, "6(0)": { title: "信仰", artist: "张信哲" }, "6(1)": { title: "我好想", artist: "张信哲" }, "6(2)": { title: "从开始到现在", artist: "张信哲" }, "6(3)": { title: "下一个永远", artist: "张信哲" }, "7(-3)": { title: "我们都是伤心人", artist: "孙楠" }, "7(-2)": { title: "生生世世", artist: "孙楠" }, "7(-1)": { title: "认识孙楠", artist: "孙楠" }, "7(0)": { title: "南极光", artist: "孙楠" }, "7(1)": { title: "楠得精选", artist: "孙楠" }, "7(2)": { title: "缘分的天空", artist: "孙楠" }, "7(3)": { title: "第一楠主角", artist: "孙楠" }, "7(4)": { title: "燃烧", artist: "孙楠" }, "7(5)": { title: "忘不了你", artist: "孙楠" }, "8(-4)": { title: "为你朝思暮想", artist: "那英" }, "8(-3)": { title: "白天不懂夜的黑", artist: "那英" }, "8(-2)": { title: "征服", artist: "那英" }, "8(-1)": { title: "干脆", artist: "那英" }, "8(0)": { title: "心酸的浪漫", artist: "那英" }, "8(1)": { title: "我不是天使", artist: "那英" }, "8(2)": { title: "如今", artist: "那英" }, "8(3)": { title: "那英全经典演唱会", artist: "那英" }, "9(-6)": { title: "生·生活", artist: "周华健" }, "9(-5)": { title: "光阴似健", artist: "周华健" }, "9(-4)": { title: "世界由你我开始", artist: "周华健" }, "9(-3)": { title: "有故事的人", artist: "周华健" }, "9(-2)": { title: "听健", artist: "周华健" }, "9(-1)": { title: "至爱吾爱", artist: "周华健" }, "9(0)": { title: "NOW 现在", artist: "周华健" }, "9(1)": { title: "忘忧草", artist: "周华健" }, "9(2)": { title: "遇见华健的感动", artist: "周华健" }, "9(3)": { title: "My Favourite Songs", artist: "周华健" }, "9(4)": { title: "爱上原味", artist: "周华健" }, "9(5)": { title: "一起吃苦的幸福", artist: "周华健" }, "10(-4)": { title: "全身莫文蔚", artist: "莫文蔚" }, "10(-3)": { title: "做自己", artist: "莫文蔚" }, "10(-2)": { title: "我要说", artist: "莫文蔚" }, "10(-1)": { title: "你可以", artist: "莫文蔚" }, "10(0)": { title: "就是莫文蔚", artist: "莫文蔚" }, "10(1)": { title: "Karen More", artist: "莫文蔚" }, "10(2)": { title: "再生", artist: "莫文蔚" }, "10(3)": { title: "十二楼的莫文蔚", artist: "莫文蔚" }, "10(4)": { title: "一朵金花", artist: "莫文蔚" }, "10(5)": { title: "恋上莫文蔚", artist: "莫文蔚" }, "11(-2)": { title: "赤裸裸", artist: "郑钧" }, "11(-1)": { title: "第三只眼", artist: "郑钧" }, "11(0)": { title: "怒放", artist: "郑钧" }, "11(1)": { title: "郑钧＝zj", artist: "郑钧" }, "11(2)": { title: "戈们的生活充满阳光", artist: "郑钧" }, "11(3)": { title: "长安长安", artist: "郑钧" }, "12(0)": { title: "我去2000年", artist: "朴树" }, "12(1)": { title: "生如夏花", artist: "朴树" }, "13(-1)": { title: "第一张创作专辑", artist: "五月天" }, "13(0)": { title: "爱情万岁", artist: "五月天" }, "13(1)": { title: "人生海海", artist: "五月天" }, "13(2)": { title: "时光机", artist: "五月天" }, "13(3)": { title: "神的孩子都在跳舞", artist: "五月天" }, "13(4)": { title: "为爱而生", artist: "五月天" }, "13(5)": { title: "后青春期的诗", artist: "五月天" }, "14(-7)": { title: "狼来了", artist: "杨千嬅" }, "14(-6)": { title: "直觉", artist: "杨千嬅" }, "14(-5)": { title: "私日记", artist: "杨千嬅" }, "14(-4)": { title: "到此一游", artist: "杨千嬅" }, "14(-3)": { title: "体验入学", artist: "杨千嬅" }, "14(-2)": { title: "夏天的故事", artist: "杨千嬅" }, "14(-1)": { title: "微笑", artist: "杨千嬅" }, "14(0)": { title: "冬天的故事", artist: "杨千嬅" }, "14(1)": { title: "Play It Loud", artist: "杨千嬅" }, "14(2)": { title: "Miriam", artist: "杨千嬅" }, "14(3)": { title: "MvsM上半场", artist: "杨千嬅" }, "14(4)": { title: "MvsM 下半场", artist: "杨千嬅" }, "15(-7)": { title: "小魔女的魔法书", artist: "范晓萱" }, "15(-6)": { title: "冰淇淋的祈祷", artist: "范晓萱" }, "15(-5)": { title: "好想谈恋爱", artist: "范晓萱" }, "15(-4)": { title: "小魔女变身舞曲", artist: "范晓萱" }, "15(-3)": { title: "小魔女魔法书2", artist: "范晓萱" }, "15(-2)": { title: "圣诞快乐SONG", artist: "范晓萱" }, "15(-1)": { title: "我要我们在一起", artist: "范晓萱" }, "15(0)": { title: "绝世名伶", artist: "范晓萱" }, "15(1)": { title: "星星", artist: "范晓萱" }, "15(2)": { title: "我要我们的范晓萱", artist: "范晓萱" }, "16(-4)": { title: "少女小渔", artist: "刘若英" }, "16(-3)": { title: "雨季", artist: "刘若英" }, "16(-2)": { title: "到处乱走", artist: "刘若英" }, "16(-1)": { title: "很爱很爱你", artist: "刘若英" }, "16(0)": { title: "我等你", artist: "刘若英" }, "16(1)": { title: "年华", artist: "刘若英" }, "16(2)": { title: "Love and theCity", artist: "刘若英" }, "16(3)": { title: "我的失败与伟大", artist: "刘若英" }, "16(4)": { title: "听说？", artist: "刘若英" }, "16(5)": { title: "一整夜", artist: "刘若英" }, "17(-5)": { title: "消息", artist: "张宇" }, "17(-4)": { title: "整个八月", artist: "张宇" }, "17(-3)": { title: "温古知新", artist: "张宇" }, "17(-2)": { title: "单恋", artist: "张宇" }, "17(-1)": { title: "月亮太阳", artist: "张宇" }, "17(0)": { title: "雨一直下", artist: "张宇" }, "17(1)": { title: "奇迹创世纪精选", artist: "张宇" }, "17(2)": { title: "替身", artist: "张宇" }, "17(3)": { title: "大丈夫", artist: "张宇" }, "17(4)": { title: "不甘寂寞", artist: "张宇" }, "18(-1)": { title: "让我想一想", artist: "陈绮贞" }, "18(0)": { title: "还是会寂寞", artist: "陈绮贞" }, "18(1)": { title: "吉他手", artist: "陈绮贞" }, "18(2)": { title: "After 17", artist: "陈绮贞" }, "18(3)": { title: "华丽的冒险", artist: "陈绮贞" }, "19(-5)": { title: "寻最", artist: "李克勤" }, "19(-4)": { title: "情牢", artist: "李克勤" }, "19(-3)": { title: "在克勤身边", artist: "李克勤" }, "19(-2)": { title: "98新曲+精选", artist: "李克勤" }, "19(-1)": { title: "一年半载", artist: "李克勤" }, "19(0)": { title: "再一次想你", artist: "李克勤" }, "19(1)": { title: "飞花", artist: "李克勤" }, "19(2)": { title: "大乐队", artist: "李克勤" }, "19(3)": { title: "Let's Celebrate", artist: "李克勤" }, "19(4)": { title: "Ever Last", artist: "李克勤" }, "20(-5)": { title: "依靠", artist: "任贤齐" }, "20(-4)": { title: "心太软", artist: "任贤齐" }, "20(-3)": { title: "很受伤", artist: "任贤齐" }, "20(-2)": { title: "爱像太平洋", artist: "任贤齐" }, "20(-1)": { title: "认真精选辑", artist: "任贤齐" }, "20(0)": { title: "为爱走天涯", artist: "任贤齐" }, "20(1)": { title: "天使兄弟小白脸", artist: "任贤齐" }, "20(2)": { title: "飞鸟", artist: "任贤齐" }, "20(3)": { title: "一个任贤齐", artist: "任贤齐" }, "21(0)": { title: "Jay", artist: "周杰伦" }, "21(1)": { title: "范特西", artist: "周杰伦" }, "21(2)": { title: "八度空间", artist: "周杰伦" }, "21(3)": { title: "叶惠美", artist: "周杰伦" }, "21(4)": { title: "七里香", artist: "周杰伦" }, "21(5)": { title: "11月的萧邦", artist: "周杰伦" }, "21(6)": { title: "依然范特西", artist: "周杰伦" }, "21(7)": { title: "我很忙", artist: "周杰伦" }, "22(-1)": { title: "Jolin1019", artist: "蔡依林" }, "22(0)": { title: "Don't Stop", artist: "蔡依林" }, "22(1)": { title: "Show Your Love", artist: "蔡依林" }, "22(2)": { title: "Lucky Number", artist: "蔡依林" }, "22(3)": { title: "看我 72变", artist: "蔡依林" }, "22(4)": { title: "城堡", artist: "蔡依林" }, "22(5)": { title: "J-Game", artist: "蔡依林" }, "22(6)": { title: "特务J", artist: "蔡依林" }, "23(-6)": { title: "爱自己", artist: "梁咏琪" }, "23(-5)": { title: "短发", artist: "梁咏琪" }, "23(-4)": { title: "新居", artist: "梁咏琪" }, "23(-3)": { title: "洗脸", artist: "梁咏琪" }, "23(-2)": { title: "新鲜", artist: "梁咏琪" }, "23(-1)": { title: "I'll Be Loving You", artist: "梁咏琪" }, "23(0)": { title: "最爱", artist: "梁咏琪" }, "23(1)": { title: "Kiss", artist: "梁咏琪" }, "23(2)": { title: "花火", artist: "梁咏琪" }, "23(3)": { title: "Amour", artist: "梁咏琪" }, "23(4)": { title: "Suddenly", artist: "梁咏琪" }, "24(-4)": { title: "就是喜欢你", artist: "张震岳" }, "24(-3)": { title: "花开了没有", artist: "张震岳" }, "24(-2)": { title: "这个下午很无聊", artist: "张震岳" }, "24(-1)": { title: "秘密基地", artist: "张震岳" }, "24(0)": { title: "有问题", artist: "张震岳" }, "24(1)": { title: "Orange 2", artist: "张震岳" }, "24(2)": { title: "等我有一天", artist: "张震岳" }, "25(0)": { title: "幸福的旁边", artist: "花儿乐队" }, "25(1)": { title: "草莓声明", artist: "花儿乐队" }, "25(2)": { title: "我是你的罗密欧", artist: "花儿乐队" }, "25(3)": { title: "花季王朝", artist: "花儿乐队" }, "25(4)": { title: "花天囍世", artist: "花儿乐队" }, "25(5)": { title: "花龄盛会", artist: "花儿乐队" }, "26(-5)": { title: "姐妹", artist: "张惠妹" }, "26(-4)": { title: "BAD BOY", artist: "张惠妹" }, "26(-3)": { title: "妹力四射", artist: "张惠妹" }, "26(-2)": { title: "牵手", artist: "张惠妹" }, "26(-1)": { title: "我可以抱你吗", artist: "张惠妹" }, "26(0)": { title: "歌声妹影", artist: "张惠妹" }, "26(1)": { title: "不顾一切", artist: "张惠妹" }, "26(2)": { title: "旅程", artist: "张惠妹" }, "26(3)": { title: "真实", artist: "张惠妹" }, "26(4)": { title: "发烧", artist: "张惠妹" }, "27(-3)": { title: "浪人情歌", artist: "伍佰" }, "27(-2)": { title: "爱情的尽头", artist: "伍佰" }, "27(-1)": { title: "树枝孤鸟", artist: "伍佰" }, "27(0)": { title: "白鸽", artist: "伍佰" }, "27(1)": { title: "梦的河流", artist: "伍佰" }, "27(2)": { title: "泪桥", artist: "伍佰" }, "27(3)": { title: "双面人", artist: "伍佰" }, "27(4)": { title: "快乐练习曲", artist: "伍佰" }, "28(-1)": { title: "一夜长大", artist: "梁静茹" }, "28(0)": { title: "勇气", artist: "梁静茹" }, "28(1)": { title: "闪亮的星", artist: "梁静茹" }, "28(2)": { title: "Sunrise", artist: "梁静茹" }, "28(3)": { title: "美丽人生", artist: "梁静茹" }, "28(4)": { title: "燕尾蝶", artist: "梁静茹" }, "28(5)": { title: "丝路", artist: "梁静茹" }, "28(6)": { title: "亲亲", artist: "梁静茹" }, "29(-1)": { title: "新裤子", artist: "新裤子" }, "29(0)": { title: "Disco Girl", artist: "新裤子" }, "29(1)": { title: "我们是自动的", artist: "新裤子" }, "29(2)": { title: "龙虎人丹", artist: "新裤子" }, "30(0)": { title: "孙燕姿", artist: "孙燕姿" }, "30(1)": { title: "我要的幸福", artist: "孙燕姿" }, "30(2)": { title: "风筝", artist: "孙燕姿" }, "30(3)": { title: "Leave", artist: "孙燕姿" }, "30(4)": { title: "未完成", artist: "孙燕姿" }, "30(5)": { title: "The Moment", artist: "孙燕姿" }, "30(6)": { title: "完美的一天", artist: "孙燕姿" }, "30(7)": { title: "逆光", artist: "孙燕姿" } };
+        const PARTICLE_OPACITY_BASE = 0.6; 
+        const PARTICLE_OPACITY_MIN = 0.3;  
+        const PARTICLE_OPACITY_MAX = 1.0;  
+        const PARTICLE_BLINK_SPEED_MAX = 10.0; 
+        
+        const RESONANCE_MAX_CLICKS = 5;       
+        const RESONANCE_MULTIPLIER = 2;       
+        const RESONANCE_BASE_COUNT = 200;     
+        const RESONANCE_SPREAD = 15.0;        
+        const RESONANCE_MIN_RADIUS = 3.5;    
+        
+        const albumData = { "1(-7)": { title: "迷", artist: "王菲", year: "1994" }, "1(-6)": { title: "天空", artist: "王菲", year: "1994" }, "1(-5)": { title: "菲靡靡之音", artist: "王菲", year: "1995" }, "1(-4)": { title: "浮躁", artist: "王菲", year: "1996" }, "1(-3)": { title: "王菲", artist: "王菲", year: "1997" }, "1(-2)": { title: "唱游", artist: "王菲", year: "1998" }, "1(-1)": { title: "只爱陌生人", artist: "王菲", year: "1999" }, "1(0)": { title: "寓言", artist: "王菲", year: "2000" }, "1(1)": { title: "王菲", artist: "王菲", year: "2001" }, "1(2)": { title: "将爱", artist: "王菲", year: "2003" }, "2(-5)": { title: "宠爱", artist: "张国荣", year: "1995" }, "2(-4)": { title: "红", artist: "张国荣", year: "1996" }, "2(-3)": { title: "这些年来", artist: "张国荣", year: "1998" }, "2(-2)": { title: "Printemps", artist: "张国荣", year: "1998" }, "2(-1)": { title: "陪你倒数", artist: "张国荣", year: "1999" }, "2(0)": { title: "大热", artist: "张国荣", year: "2000" }, "2(1)": { title: "untitled", artist: "张国荣", year: "2000" }, "2(2)": { title: "forever", artist: "张国荣", year: "2001" }, "2(3)": { title: "crossover", artist: "张国荣", year: "2002" }, "2(4)": { title: "一切随风", artist: "张国荣", year: "2003" }, "3(-7)": { title: "爱上一个不回家的人", artist: "林忆莲", year: "1990" }, "3(-6)": { title: "倾斜城市", artist: "林忆莲", year: "1990" }, "3(-5)": { title: "open up", artist: "林忆莲", year: "1995" }, "3(-4)": { title: "爱是唯一", artist: "林忆莲", year: "1996" }, "3(-3)": { title: "夜太黑", artist: "林忆莲", year: "1996" }, "3(-2)": { title: "美妙世界", artist: "林忆莲", year: "1997" }, "3(-1)": { title: "铿锵玫瑰", artist: "林忆莲", year: "1999" }, "3(0)": { title: "林忆莲's", artist: "林忆莲", year: "2000" }, "3(1)": { title: "原来…", artist: "林忆莲", year: "2001" }, "3(2)": { title: "2001莲", artist: "林忆莲", year: "2001" }, "3(3)": { title: "Encore", artist: "林忆莲", year: "2002" }, "3(4)": { title: "本色", artist: "林忆莲", year: "2005" }, "4(-6)": { title: "情敌贝多芬", artist: "王力宏", year: "1995" }, "4(-5)": { title: "如果你听见我的歌", artist: "王力宏", year: "1996" }, "4(-4)": { title: "好想你", artist: "王力宏", year: "1996" }, "4(-3)": { title: "白纸", artist: "王力宏", year: "1997" }, "4(-2)": { title: "公转自转", artist: "王力宏", year: "1998" }, "4(-1)": { title: "不可能错过你", artist: "王力宏", year: "1999" }, "4(0)": { title: "永远的第一天", artist: "王力宏", year: "2000" }, "4(1)": { title: "唯一", artist: "王力宏", year: "2001" }, "4(2)": { title: "不可思议", artist: "王力宏", year: "2003" }, "4(3)": { title: "心中的日月", artist: "王力宏", year: "2004" }, "5(-1)": { title: "David Tao", artist: "陶喆", year: "1997" }, "5(0)": { title: "I'm OK", artist: "陶喆", year: "1999" }, "5(1)": { title: "黑色柳丁", artist: "陶喆", year: "2002" }, "5(2)": { title: "太平盛世", artist: "陶喆", year: "2005" }, "5(3)": { title: "太美丽", artist: "陶喆", year: "2006" }, "5(4)": { title: "69乐章", artist: "陶喆", year: "2009" }, "6(-7)": { title: "梦想", artist: "张信哲", year: "1996" }, "6(-6)": { title: "思念", artist: "张信哲", year: "1996" }, "6(-5)": { title: "挚爱", artist: "张信哲", year: "1997" }, "6(-4)": { title: "直觉", artist: "张信哲", year: "1997" }, "6(-3)": { title: "选哲", artist: "张信哲", year: "1998" }, "6(-2)": { title: "到处留情", artist: "张信哲", year: "1998" }, "6(-1)": { title: "回来", artist: "张信哲", year: "1999" }, "6(0)": { title: "信仰", artist: "张信哲", year: "2000" }, "6(1)": { title: "我好想", artist: "张信哲", year: "2001" }, "6(2)": { title: "从开始到现在", artist: "张信哲", year: "2002" }, "6(3)": { title: "下一个永远", artist: "张信哲", year: "2004" }, "7(-3)": { title: "我们都是伤心人", artist: "孙楠", year: "1993" }, "7(-2)": { title: "生生世世", artist: "孙楠", year: "1995" }, "7(-1)": { title: "认识孙楠", artist: "孙楠", year: "1997" }, "7(0)": { title: "南极光", artist: "孙楠", year: "1999" }, "7(1)": { title: "楠得精选", artist: "孙楠", year: "2001" }, "7(2)": { title: "缘分的天空", artist: "孙楠", year: "2002" }, "7(3)": { title: "第一楠主角", artist: "孙楠", year: "2003" }, "7(4)": { title: "燃烧", artist: "孙楠", year: "2004" }, "7(5)": { title: "忘不了你", artist: "孙楠", year: "2005" }, "8(-4)": { title: "为你朝思暮想", artist: "那英", year: "1994" }, "8(-3)": { title: "白天不懂夜的黑", artist: "那英", year: "1995" }, "8(-2)": { title: "征服", artist: "那英", year: "1998" }, "8(-1)": { title: "干脆", artist: "那英", year: "1999" }, "8(0)": { title: "心酸的浪漫", artist: "那英", year: "2000" }, "8(1)": { title: "我不是天使", artist: "那英", year: "2001" }, "8(2)": { title: "如今", artist: "那英", year: "2002" }, "8(3)": { title: "那英全经典演唱会", artist: "那英", year: "2002" }, "9(-6)": { title: "生·生活", artist: "周华健", year: "1996" }, "9(-5)": { title: "光阴似健", artist: "周华健", year: "1997" }, "9(-4)": { title: "世界由你我开始", artist: "周华健", year: "1997" }, "9(-3)": { title: "有故事的人", artist: "周华健", year: "1998" }, "9(-2)": { title: "听健", artist: "周华健", year: "1998" }, "9(-1)": { title: "至爱吾爱", artist: "周华健", year: "1999" }, "9(0)": { title: "NOW 现在", artist: "周华健", year: "1999" }, "9(1)": { title: "忘忧草", artist: "周华健", year: "2001" }, "9(2)": { title: "遇见华健的感动", artist: "周华健", year: "2003" }, "9(3)": { title: "My Favourite Songs", artist: "周华健", year: "2003" }, "9(4)": { title: "爱上原味", artist: "周华健", year: "2003" }, "9(5)": { title: "一起吃苦的幸福", artist: "周华健", year: "2003" }, "10(-4)": { title: "全身莫文蔚", artist: "莫文蔚", year: "1996" }, "10(-3)": { title: "做自己", artist: "莫文蔚", year: "1997" }, "10(-2)": { title: "我要说", artist: "莫文蔚", year: "1998" }, "10(-1)": { title: "你可以", artist: "莫文蔚", year: "1999" }, "10(0)": { title: "就是莫文蔚", artist: "莫文蔚", year: "1999" }, "10(1)": { title: "Karen More", artist: "莫文蔚", year: "2000" }, "10(2)": { title: "再生", artist: "莫文蔚", year: "2000" }, "10(3)": { title: "十二楼的莫文蔚", artist: "莫文蔚", year: "2000" }, "10(4)": { title: "一朵金花", artist: "莫文蔚", year: "2001" }, "10(5)": { title: "恋上莫文蔚", artist: "莫文蔚", year: "2002" }, "11(-2)": { title: "赤裸裸", artist: "郑钧", year: "1994" }, "11(-1)": { title: "第三只眼", artist: "郑钧", year: "1997" }, "11(0)": { title: "怒放", artist: "郑钧", year: "1999" }, "11(1)": { title: "郑钧＝zj", artist: "郑钧", year: "2001" }, "11(2)": { title: "戈们的生活充满阳光", artist: "郑钧", year: "2005" }, "11(3)": { title: "长安长安", artist: "郑钧", year: "2007" }, "12(0)": { title: "我去2000年", artist: "朴树", year: "1999" }, "12(1)": { title: "生如夏花", artist: "朴树", year: "2003" }, "13(-1)": { title: "第一张创作专辑", artist: "五月天", year: "1999" }, "13(0)": { title: "爱情万岁", artist: "五月天", year: "2000" }, "13(1)": { title: "人生海海", artist: "五月天", year: "2001" }, "13(2)": { title: "时光机", artist: "五月天", year: "2003" }, "13(3)": { title: "神的孩子都在跳舞", artist: "五月天", year: "2004" }, "13(4)": { title: "为爱而生", artist: "五月天", year: "2006" }, "13(5)": { title: "后青春期的诗", artist: "五月天", year: "2008" }, "14(-7)": { title: "狼来了", artist: "杨千嬅", year: "1997" }, "14(-6)": { title: "直觉", artist: "杨千嬅", year: "1997" }, "14(-5)": { title: "私日记", artist: "杨千嬅", year: "1997" }, "14(-4)": { title: "到此一游", artist: "杨千嬅", year: "1998" }, "14(-3)": { title: "体验入学", artist: "杨千嬅", year: "1998" }, "14(-2)": { title: "夏天的故事", artist: "杨千嬅", year: "1999" }, "14(-1)": { title: "微笑", artist: "杨千嬅", year: "1999" }, "14(0)": { title: "冬天的故事", artist: "杨千嬅", year: "1999" }, "14(1)": { title: "Play It Loud", artist: "杨千嬅", year: "2000" }, "14(2)": { title: "Miriam", artist: "杨千嬅", year: "2001" }, "14(3)": { title: "MvsM上半场", artist: "杨千嬅", year: "2002" }, "14(4)": { title: "MvsM 下半场", artist: "杨千嬅", year: "2002" }, "15(-7)": { title: "小魔女的魔法书", artist: "范晓萱", year: "1996" }, "15(-6)": { title: "冰淇淋的祈祷", artist: "范晓萱", year: "1996" }, "15(-5)": { title: "好想谈恋爱", artist: "范晓萱", year: "1996" }, "15(-4)": { title: "小魔女变身舞曲", artist: "范晓萱", year: "1997" }, "15(-3)": { title: "小魔女魔法书2", artist: "范晓萱", year: "1997" }, "15(-2)": { title: "圣诞快乐SONG", artist: "范晓萱", year: "1997" }, "15(-1)": { title: "我要我们在一起", artist: "范晓萱", year: "1999" }, "15(0)": { title: "绝世名伶", artist: "范晓萱", year: "2001" }, "15(1)": { title: "星星", artist: "范晓萱", year: "2003" }, "15(2)": { title: "我要我们的范晓萱", artist: "范晓萱", year: "2004" }, "16(-4)": { title: "少女小渔", artist: "刘若英", year: "1995" }, "16(-3)": { title: "雨季", artist: "刘若英", year: "1995" }, "16(-2)": { title: "到处乱走", artist: "刘若英", year: "1996" }, "16(-1)": { title: "很爱很爱你", artist: "刘若英", year: "1998" }, "16(0)": { title: "我等你", artist: "刘若英", year: "2000" }, "16(1)": { title: "年华", artist: "刘若英", year: "2001" }, "16(2)": { title: "Love and theCity", artist: "刘若英", year: "2002" }, "16(3)": { title: "我的失败与伟大", artist: "刘若英", year: "2003" }, "16(4)": { title: "听说？", artist: "刘若英", year: "2004" }, "16(5)": { title: "一整夜", artist: "刘若英", year: "2005" }, "17(-5)": { title: "消息", artist: "张宇", year: "1996" }, "17(-4)": { title: "整个八月", artist: "张宇", year: "1997" }, "17(-3)": { title: "温古知新", artist: "张宇", year: "1997" }, "17(-2)": { title: "单恋", artist: "张宇", year: "1998" }, "17(-1)": { title: "月亮太阳", artist: "张宇", year: "1998" }, "17(0)": { title: "雨一直下", artist: "张宇", year: "1999" }, "17(1)": { title: "奇迹创世纪精选", artist: "张宇", year: "2000" }, "17(2)": { title: "替身", artist: "张宇", year: "2001" }, "17(3)": { title: "大丈夫", artist: "张宇", year: "2003" }, "17(4)": { title: "不甘寂寞", artist: "张宇", year: "2004" }, "18(-1)": { title: "让我想一想", artist: "陈绮贞", year: "1998" }, "18(0)": { title: "还是会寂寞", artist: "陈绮贞", year: "2000" }, "18(1)": { title: "吉他手", artist: "陈绮贞", year: "2002" }, "18(2)": { title: "After 17", artist: "陈绮贞", year: "2004" }, "18(3)": { title: "华丽的冒险", artist: "陈绮贞", year: "2005" }, "19(-5)": { title: "寻最", artist: "李克勤", year: "1997" }, "19(-4)": { title: "情牢", artist: "李克勤", year: "1997" }, "19(-3)": { title: "在克勤身边", artist: "李克勤", year: "1997" }, "19(-2)": { title: "98新曲+精选", artist: "李克勤", year: "1998" }, "19(-1)": { title: "一年半载", artist: "李克勤", year: "1999" }, "19(0)": { title: "再一次想你", artist: "李克勤", year: "2000" }, "19(1)": { title: "飞花", artist: "李克勤", year: "2001" }, "19(2)": { title: "大乐队", artist: "李克勤", year: "2002" }, "19(3)": { title: "Let's Celebrate", artist: "李克勤", year: "2003" }, "19(4)": { title: "Ever Last", artist: "李克勤", year: "2003" }, "20(-5)": { title: "依靠", artist: "任贤齐", year: "1996" }, "20(-4)": { title: "心太软", artist: "任贤齐", year: "1996" }, "20(-3)": { title: "很受伤", artist: "任贤齐", year: "1997" }, "20(-2)": { title: "爱像太平洋", artist: "任贤齐", year: "1998" }, "20(-1)": { title: "认真精选辑", artist: "任贤齐", year: "1999" }, "20(0)": { title: "为爱走天涯", artist: "任贤齐", year: "2000" }, "20(1)": { title: "天使兄弟小白脸", artist: "任贤齐", year: "2000" }, "20(2)": { title: "飞鸟", artist: "任贤齐", year: "2001" }, "20(3)": { title: "一个任贤齐", artist: "任贤齐", year: "2002" }, "21(0)": { title: "Jay", artist: "周杰伦", year: "2000" }, "21(1)": { title: "范特西", artist: "周杰伦", year: "2001" }, "21(2)": { title: "八度空间", artist: "周杰伦", year: "2002" }, "21(3)": { title: "叶惠美", artist: "周杰伦", year: "2003" }, "21(4)": { title: "七里香", artist: "周杰伦", year: "2004" }, "21(5)": { title: "11月的萧邦", artist: "周杰伦", year: "2005" }, "21(6)": { title: "依然范特西", artist: "周杰伦", year: "2006" }, "21(7)": { title: "我很忙", artist: "周杰伦", year: "2007" }, "22(-1)": { title: "Jolin1019", artist: "蔡依林", year: "1999" }, "22(0)": { title: "Don't Stop", artist: "蔡依林", year: "2000" }, "22(1)": { title: "Show Your Love", artist: "蔡依林", year: "2000" }, "22(2)": { title: "Lucky Number", artist: "蔡依林", year: "2001" }, "22(3)": { title: "看我 72变", artist: "蔡依林", year: "2003" }, "22(4)": { title: "城堡", artist: "蔡依林", year: "2004" }, "22(5)": { title: "J-Game", artist: "蔡依林", year: "2005" }, "22(6)": { title: "特务J", artist: "蔡依林", year: "2007" }, "23(-6)": { title: "爱自己", artist: "梁咏琪", year: "1996" }, "23(-5)": { title: "短发", artist: "梁咏琪", year: "1997" }, "23(-4)": { title: "新居", artist: "梁咏琪", year: "1997" }, "23(-3)": { title: "洗脸", artist: "梁咏琪", year: "1997" }, "23(-2)": { title: "新鲜", artist: "梁咏琪", year: "1999" }, "23(-1)": { title: "I'll Be Loving You", artist: "梁咏琪", year: "1999" }, "23(0)": { title: "最爱", artist: "梁咏琪", year: "1999" }, "23(1)": { title: "Kiss", artist: "梁咏琪", year: "2000" }, "23(2)": { title: "花火", artist: "梁咏琪", year: "2000" }, "23(3)": { title: "Amour", artist: "梁咏琪", year: "2001" }, "23(4)": { title: "Suddenly", artist: "梁咏琪", year: "2001" }, "24(-4)": { title: "就是喜欢你", artist: "张震岳", year: "1993" }, "24(-3)": { title: "花开了没有", artist: "张震岳", year: "1994" }, "24(-2)": { title: "这个下午很无聊", artist: "张震岳", year: "1997" }, "24(-1)": { title: "秘密基地", artist: "张震岳", year: "1998" }, "24(0)": { title: "有问题", artist: "张震岳", year: "2000" }, "24(1)": { title: "Orange 2", artist: "张震岳", year: "2001" }, "24(2)": { title: "等我有一天", artist: "张震岳", year: "2002" }, "25(0)": { title: "幸福的旁边", artist: "花儿乐队", year: "1999" }, "25(1)": { title: "草莓声明", artist: "花儿乐队", year: "2001" }, "25(2)": { title: "我是你的罗密欧", artist: "花儿乐队", year: "2004" }, "25(3)": { title: "花季王朝", artist: "花儿乐队", year: "2005" }, "25(4)": { title: "花天囍世", artist: "花儿乐队", year: "2006" }, "25(5)": { title: "花龄盛会", artist: "花儿乐队", year: "2007" }, "26(-5)": { title: "姐妹", artist: "张惠妹", year: "1996" }, "26(-4)": { title: "BAD BOY", artist: "张惠妹", year: "1997" }, "26(-3)": { title: "妹力四射", artist: "张惠妹", year: "1998" }, "26(-2)": { title: "牵手", artist: "张惠妹", year: "1998" }, "26(-1)": { title: "我可以抱你吗", artist: "张惠妹", year: "1999" }, "26(0)": { title: "歌声妹影", artist: "张惠妹", year: "2000" }, "26(1)": { title: "不顾一切", artist: "张惠妹", year: "2000" }, "26(2)": { title: "旅程", artist: "张惠妹", year: "2001" }, "26(3)": { title: "真实", artist: "张惠妹", year: "2001" }, "26(4)": { title: "发烧", artist: "张惠妹", year: "2002" }, "27(-3)": { title: "浪人情歌", artist: "伍佰", year: "1994" }, "27(-2)": { title: "爱情的尽头", artist: "伍佰", year: "1996" }, "27(-1)": { title: "树枝孤鸟", artist: "伍佰", year: "1998" }, "27(0)": { title: "白鸽", artist: "伍佰", year: "1999" }, "27(1)": { title: "梦的河流", artist: "伍佰", year: "2001" }, "27(2)": { title: "泪桥", artist: "伍佰", year: "2003" }, "27(3)": { title: "双面人", artist: "伍佰", year: "2005" }, "27(4)": { title: "快乐练习曲", artist: "伍佰", year: "2006" }, "28(-1)": { title: "一夜长大", artist: "梁静茹", year: "1999" }, "28(0)": { title: "勇气", artist: "梁静茹", year: "2000" }, "28(1)": { title: "闪亮的星", artist: "梁静茹", year: "2001" }, "28(2)": { title: "Sunrise", artist: "梁静茹", year: "2002" }, "28(3)": { title: "美丽人生", artist: "梁静茹", year: "2003" }, "28(4)": { title: "燕尾蝶", artist: "梁静茹", year: "2004" }, "28(5)": { title: "丝路", artist: "梁静茹", year: "2005" }, "28(6)": { title: "亲亲", artist: "梁静茹", year: "2006" }, "29(-1)": { title: "新裤子", artist: "新裤子", year: "1998" }, "29(0)": { title: "Disco Girl", artist: "新裤子", year: "2000" }, "29(1)": { title: "我们是自动的", artist: "新裤子", year: "2002" }, "29(2)": { title: "龙虎人丹", artist: "新裤子", year: "2006" }, "30(0)": { title: "孙燕姿", artist: "孙燕姿", year: "2000" }, "30(1)": { title: "我要的幸福", artist: "孙燕姿", year: "2000" }, "30(2)": { title: "风筝", artist: "孙燕姿", year: "2001" }, "30(3)": { title: "Leave", artist: "孙燕姿", year: "2002" }, "30(4)": { title: "未完成", artist: "孙燕姿", year: "2003" }, "30(5)": { title: "The Moment", artist: "孙燕姿", year: "2003" }, "30(6)": { title: "完美的一天", artist: "孙燕姿", year: "2005" }, "30(7)": { title: "逆光", artist: "孙燕姿", year: "2007" } };
 
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
@@ -953,7 +1375,7 @@
         // --- Radio Mesh ---
         const introRadioMat = new THREE.ShaderMaterial({
             uniforms: {
-                tDiffuse: { value: new THREE.Texture() }, // Init with empty texture
+                tDiffuse: { value: new THREE.TextureLoader().load(placeholderRadio) },
                 uTime: { value: 0 },
                 uGlitchStrength: { value: 0 },
                 uOpacity: { value: 1.0 }, 
@@ -972,7 +1394,7 @@
         // --- Title Mesh ---
         const introTitleMat = new THREE.ShaderMaterial({
              uniforms: {
-                tDiffuse: { value: new THREE.Texture() }, // Init with empty texture
+                tDiffuse: { value: new THREE.TextureLoader().load(placeholderRadio) },
                 uTime: { value: 0 },
                 uGlitchStrength: { value: 0 },
                 uOpacity: { value: 0.0 }, 
@@ -1129,7 +1551,7 @@
                     undefined,
                     function (err) {
                         // Error: silent fail, keep fallback
-                        console.warn("Image load failed:", path);
+                        // console.warn("Image load failed:", path); // Suppress warning to clean console
                     }
                 );
                 return fallbackTex;
@@ -1288,19 +1710,132 @@
 
         // 【音频文件映射表】
         // 格式: "卡片ID": "音频文件路径"
-        const TRACK_SOURCES = {
-            "12(0)": "assets/12/12(01).mp3",
-            "21(0)": "assets/21/21(01).mp3", // 周杰伦 Jay
-            "21(3)": "assets/21/21(31).mp3", // 周杰伦 叶惠美
-            "21(4)": "assets/21/21(41).mp3"  // 周杰伦 七里香
-        };
+        // NO MAPPING - AUTO DERIVED
 
         // Mock audioManager for preview so code doesn't crash on click
         window.audioManager = {
             albumLabelEl: document.getElementById('album-label'),
+            // Using wrapper elements for progress interaction
+            progressWrapperEl: document.getElementById('main-progress-wrapper'),
+            progressEl: document.getElementById('progress-container'),
+            bgEl: document.querySelector('.progress-bg'),
+            fillEl: document.querySelector('.progress-fill'),
+            knobEl: document.querySelector('.progress-knob'),
+            tooltipEl: document.querySelector('.progress-tooltip'),
+            miniPlayerEl: document.getElementById('mini-player'),
+            
+            // Mini Progress Elements
+            miniProgressEl: document.getElementById('mini-progress-container'),
+            miniFillEl: document.querySelector('#mini-progress-container .progress-fill'),
+            miniKnobEl: document.querySelector('#mini-progress-container .progress-knob'),
+            miniTooltipEl: document.querySelector('#mini-progress-container .progress-tooltip'),
+            
             audioEl: new Audio(),
             isPlaying: false,
+            // Track the specific card data (or ID) being played
+            currentTrackData: null,
+            // Pending source for focused album
+            pendingSrc: null,
             
+            init: function() {
+                // Pass the wrapper container for the main progress
+                this.bindProgressEvents(this.progressEl, this.fillEl, this.knobEl, this.tooltipEl);
+                this.bindProgressEvents(this.miniProgressEl, this.miniFillEl, this.miniKnobEl, null); 
+                
+                // Bind audio events
+                this.audioEl.addEventListener('timeupdate', () => this.updateProgress());
+                this.audioEl.addEventListener('ended', () => {
+                    this.isPlaying = false;
+                    this.updateUIState();
+                });
+                
+                // Mini Player Buttons
+                document.getElementById('mini-pause-btn').onclick = (e) => {
+                    e.stopPropagation();
+                    this.playToggle();
+                };
+                document.getElementById('mini-close-btn').onclick = (e) => {
+                    e.stopPropagation();
+                    this.stop(); // Stop and close
+                };
+                
+                // Toggle Button logic for mini player
+                const toggleBtn = document.getElementById('mini-toggle-btn');
+                const miniPlayer = document.getElementById('mini-player');
+                
+                toggleBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    miniPlayer.classList.toggle('collapsed');
+                };
+            },
+            
+            // Check existence of audio file using HEAD request
+            // This is just to see if we should show the play button on a focused card
+            checkAndSetupAudio: function(groupId, labelText) {
+                const path = `assets/${groupId}/${labelText}(1).mp3`;
+                this.hideButton(); // Default hide main button
+                this.hideProgress(); // Default hide main progress
+                this.pendingSrc = null;
+
+                // Use fetch to check if file exists
+                fetch(path, { method: 'HEAD' })
+                    .then(res => {
+                        if (res.ok) {
+                            // If focused album is still the same, setup
+                            if (focusedAlbum && focusedAlbum.userData.labelText === labelText) {
+                                // Store this potential source on the button logic
+                                this.pendingSrc = path; 
+                                this.showButton();
+                                
+                                // Logic: Show progress bar IF this song is currently playing
+                                // AND matches the currently focused album's audio
+                                if (this.audioEl.src.includes(encodeURI(path)) || this.audioEl.src.endsWith(path)) {
+                                    if(!this.audioEl.paused) {
+                                         this.showProgress();
+                                    }
+                                }
+                                
+                                this.updateMainButtonIcon(); // Set icon based on whether this pendingSrc is playing
+                            }
+                        } else {
+                            this.pendingSrc = null;
+                        }
+                    })
+                    .catch(err => {
+                        this.pendingSrc = null;
+                    });
+            },
+            
+            // Called when Main Play Button is clicked
+            handleMainPlayClick: function() {
+                if (!window.userSystem.isLoggedIn) {
+                    alert("请登录以播放音乐");
+                    return;
+                }
+                if (!this.pendingSrc) return;
+
+                // Check if we are already playing this specific track
+                // Use includes because src might be full URL
+                if (this.audioEl.src.includes(encodeURI(this.pendingSrc)) || this.audioEl.src.endsWith(this.pendingSrc)) {
+                    // Toggle pause/play
+                    this.playToggle();
+                    
+                    // RE-ASSIGN currentTrackData even if same song, to ensure mini-player knows about it
+                    this.currentTrackData = focusedAlbum.userData;
+                } else {
+                    // New track
+                    this.load(this.pendingSrc);
+                    this.currentTrackData = focusedAlbum.userData;
+                    
+                    // NEW: Immediately show mini player
+                    this.showMiniPlayer();
+
+                    this.playToggle();
+                    this.hideMiniPlayer(); // Hide mini because we are focused on it
+                    this.showProgress(); // Show progress bar on main view
+                }
+            },
+
             load: function(src){ 
                 if (src) {
                     this.audioEl.src = src;
@@ -1308,31 +1843,81 @@
                     this.audioEl.src = ''; 
                 }
             },
+            
+            // New logic for displaying metadata on mini player
+            updateCurrentInfo: function(data) {
+                const title = data.labelText;
+                const artist = albumData[title] ? albumData[title].artist : "Unknown";
+                const imgPath = `assets/${data.groupId}/${title}.jpg`; // Try to guess image path
+                
+                // Update Mini Player DOM
+                const mini = document.getElementById('mini-player');
+                mini.querySelector('img').src = imgPath;
+                mini.querySelector('.title').innerText = albumData[title] ? albumData[title].title : title;
+                mini.querySelector('.artist').innerText = artist;
+            },
+
             playToggle: function() {
-                if (!window.userSystem.isLoggedIn) {
-                    alert("Please Login to Play Music");
-                    return;
-                }
                 if (!this.audioEl.src) return;
                 if (this.audioEl.paused) {
                     this.audioEl.play().catch(e=>console.log("Audio play error", e));
-                    document.getElementById('track-icon-play').style.display = 'none';
-                    document.getElementById('track-icon-pause').style.display = 'block';
+                    this.isPlaying = true;
+                    // If focused album matches playing audio, show progress
+                    if(focusedAlbum && this.pendingSrc && (this.audioEl.src.includes(encodeURI(this.pendingSrc)) || this.audioEl.src.endsWith(this.pendingSrc))) {
+                         this.showProgress();
+                    }
                 } else {
                     this.audioEl.pause();
-                    document.getElementById('track-icon-play').style.display = 'block';
-                    document.getElementById('track-icon-pause').style.display = 'none';
+                    this.isPlaying = false;
                 }
+                this.updateUIState();
             },
+
             stop: function(){
                 this.audioEl.pause();
                 this.audioEl.currentTime = 0;
-                document.getElementById('track-icon-play').style.display = 'block';
-                document.getElementById('track-icon-pause').style.display = 'none';
+                this.isPlaying = false;
+                this.currentTrackData = null;
+                this.updateUIState();
+                this.hideMiniPlayer();
             },
+            
+            // Central UI update based on state
+            updateUIState: function() {
+                const playIcon = document.getElementById('track-icon-play');
+                const pauseIcon = document.getElementById('track-icon-pause');
+                const miniIcon = document.querySelector('#mini-pause-btn svg path');
+                
+                // Update Main Button Icon (if visible)
+                if (this.isPlaying) {
+                    playIcon.style.display = 'none';
+                    pauseIcon.style.display = 'block';
+                    // Update Mini Icon to Pause symbol
+                    if(miniIcon) miniIcon.setAttribute('d', 'M6 19h4V5H6v14zm8-14v14h4V5h-4z'); 
+                } else {
+                    playIcon.style.display = 'block';
+                    pauseIcon.style.display = 'none';
+                     // Update Mini Icon to Play symbol
+                    if(miniIcon) miniIcon.setAttribute('d', 'M8 5v14l11-7z');
+                }
+            },
+
+            // Ensure Main Button has correct state when focusing a new album
+            updateMainButtonIcon: function() {
+                // If the pending source matches playing source, sync icon
+                // Else, show play icon (ready to start new)
+                if (this.pendingSrc && this.audioEl.src.endsWith(this.pendingSrc) && this.isPlaying) {
+                     document.getElementById('track-icon-play').style.display = 'none';
+                     document.getElementById('track-icon-pause').style.display = 'block';
+                } else {
+                     document.getElementById('track-icon-play').style.display = 'block';
+                     document.getElementById('track-icon-pause').style.display = 'none';
+                }
+            },
+            
             resonate: function() {
                 if (!window.userSystem.isLoggedIn) {
-                    alert("Please Login to Resonate");
+                    alert("请登录以共鸣");
                     return;
                 }
                 if (!focusedAlbum) return;
@@ -1350,13 +1935,141 @@
             showButton: function(){ document.getElementById('track-play-btn').style.display='flex'; },
             hideButton: function(){ document.getElementById('track-play-btn').style.display='none'; },
             showResonateButton: function(){ document.getElementById('resonate-btn').style.display='flex'; },
-            hideResonateButton: function(){ document.getElementById('resonate-btn').style.display='none'; }
+            hideResonateButton: function(){ document.getElementById('resonate-btn').style.display='none'; },
+            
+            showProgress: function() { 
+                const wrapper = document.getElementById('main-progress-wrapper');
+                if(wrapper) wrapper.classList.add('active'); 
+            },
+            hideProgress: function() { 
+                const wrapper = document.getElementById('main-progress-wrapper');
+                if(wrapper) wrapper.classList.remove('active'); 
+            },
+
+            // Progress Bar Logic
+            updateProgress: function() {
+                if (this.isDragging) return;
+                const duration = this.audioEl.duration || 0;
+                const currentTime = this.audioEl.currentTime || 0;
+                const progressPercent = (currentTime / duration) * 100;
+                
+                // Update main progress
+                if(this.fillEl) this.fillEl.style.width = `${progressPercent}%`;
+                if(this.knobEl) this.knobEl.style.left = `${progressPercent}%`;
+                
+                // Update mini progress
+                if(this.miniFillEl) this.miniFillEl.style.width = `${progressPercent}%`;
+                if(this.miniKnobEl) this.miniKnobEl.style.left = `${progressPercent}%`;
+            },
+            
+            formatTime: function(seconds) {
+                const min = Math.floor(seconds / 60);
+                const sec = Math.floor(seconds % 60);
+                return `${min}:${sec < 10 ? '0' + sec : sec}`;
+            },
+
+            // Generalized bind function
+            bindProgressEvents: function(container, fill, knob, tooltip) {
+                if(!container) return; // Guard clause
+                let isDragging = false;
+                
+                const updateDrag = (e) => {
+                    const rect = container.getBoundingClientRect();
+                    let offsetX = e.clientX - rect.left;
+                    if (offsetX < 0) offsetX = 0;
+                    if (offsetX > rect.width) offsetX = rect.width;
+                    const percent = (offsetX / rect.width);
+                    
+                    fill.style.width = `${percent * 100}%`;
+                    knob.style.left = `${percent * 100}%`;
+                    
+                    const duration = this.audioEl.duration || 0;
+                    const time = duration * percent;
+                    if(tooltip) {
+                         tooltip.innerText = `${this.formatTime(time)} / ${this.formatTime(duration)}`;
+                         tooltip.style.left = `${percent * 100}%`;
+                         tooltip.style.opacity = 1;
+                    }
+                    
+                    return percent; 
+                };
+
+                container.addEventListener('mousedown', (e) => {
+                    if(!this.audioEl.src) return;
+                    e.preventDefault(); // Prevents selection
+                    e.stopPropagation(); // Stops bubbling to canvas
+                    this.isDragging = true; // Global flag to stop auto update
+                    isDragging = true; // Local flag for this bar
+                    updateDrag(e);
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (isDragging) {
+                        e.preventDefault();
+                        updateDrag(e);
+                    }
+                });
+
+                document.addEventListener('mouseup', (e) => {
+                    if (isDragging) {
+                        isDragging = false;
+                        this.isDragging = false;
+                        const percent = updateDrag(e);
+                        const duration = this.audioEl.duration || 0;
+                        if (duration) {
+                            this.audioEl.currentTime = duration * percent;
+                        }
+                        if(tooltip) tooltip.style.opacity = 0; 
+                    }
+                });
+
+                container.addEventListener('mousemove', (e) => {
+                    if(!this.audioEl.src) return;
+                    const rect = container.getBoundingClientRect();
+                    let offsetX = e.clientX - rect.left;
+                    if (offsetX < 0) offsetX = 0;
+                    if (offsetX > rect.width) offsetX = rect.width;
+                    const percent = (offsetX / rect.width);
+                    const duration = this.audioEl.duration || 0;
+                    if(tooltip) {
+                        tooltip.innerText = `${this.formatTime(duration * percent)} / ${this.formatTime(duration)}`;
+                        tooltip.style.left = `${percent * 100}%`;
+                    }
+                });
+            },
+            
+            // Mini Player Controls
+            showMiniPlayer: function() {
+                if (!this.currentTrackData) return;
+                const data = this.currentTrackData;
+                const title = data.labelText;
+                const artist = albumData[title] ? albumData[title].artist : "Unknown";
+                
+                // Construct image path for mini player
+                const imgPath = `assets/${data.groupId}/${title}.jpg`; 
+                
+                // Update DOM
+                const mini = this.miniPlayerEl;
+                mini.querySelector('img').src = imgPath;
+                mini.querySelector('.title').innerText = albumData[title] ? albumData[title].title : title;
+                mini.querySelector('.artist').innerText = artist;
+                
+                mini.classList.add('active');
+                
+                // Update play/pause icon in mini player
+                this.updateUIState();
+            },
+            
+            hideMiniPlayer: function() {
+                this.miniPlayerEl.classList.remove('active');
+            }
         };
+        window.audioManager.init(); // Initialize listeners
         
         // Bind play button click
         document.getElementById('track-play-btn').onclick = (e) => {
             e.stopPropagation();
-            window.audioManager.playToggle();
+            window.audioManager.handleMainPlayClick();
         };
         
         // Bind resonate button click
@@ -1475,9 +2188,9 @@
         document.body.addEventListener('click', startExperience);
         document.body.addEventListener('touchstart', startExperience);
 
-        function onStart(e) { if(e.target.closest('.control-btn') || e.target.closest('#resonate-btn') || e.target.closest('#track-play-btn') || e.target.closest('#overlay-container') || e.target.closest('#top-bar')) return; if(e.button===0) isDrag=true; else if(e.button===1) isPan=true; dragS={x:e.clientX,y:e.clientY}; lastM={x:e.clientX,y:e.clientY}; }
-        function onEnd(e) { if(e.target.closest('.control-btn') || e.target.closest('#resonate-btn') || e.target.closest('#track-play-btn') || e.target.closest('#overlay-container') || e.target.closest('#top-bar')) return; if(isDrag) { isDrag=false; if(Math.sqrt(Math.pow(e.clientX-dragS.x,2)+Math.pow(e.clientY-dragS.y,2))<10 && e.button===0) handleClick(e.clientX,e.clientY); } if(isPan) isPan=false; }
-        function onMove(e) { if(e.target.closest('.control-btn') || e.target.closest('#track-play-btn') || e.target.closest('#resonate-btn') || e.target.closest('#overlay-container') || e.target.closest('#top-bar')) return; const dx=e.clientX-lastM.x, dy=e.clientY-lastM.y; mX=(e.clientX/window.innerWidth)*2-1; mY=-(e.clientY/window.innerHeight)*2+1; 
+        function onStart(e) { if(e.target.closest('.control-btn') || e.target.closest('#resonate-btn') || e.target.closest('#track-play-btn') || e.target.closest('#overlay-container') || e.target.closest('.progress-container') || e.target.closest('#top-bar') || e.target.closest('#main-progress-wrapper')) return; if(e.button===0) isDrag=true; else if(e.button===1) isPan=true; dragS={x:e.clientX,y:e.clientY}; lastM={x:e.clientX,y:e.clientY}; }
+        function onEnd(e) { if(e.target.closest('.control-btn') || e.target.closest('#resonate-btn') || e.target.closest('#track-play-btn') || e.target.closest('#overlay-container') || e.target.closest('.progress-container') || e.target.closest('#top-bar') || e.target.closest('#main-progress-wrapper')) return; if(isDrag) { isDrag=false; if(Math.sqrt(Math.pow(e.clientX-dragS.x,2)+Math.pow(e.clientY-dragS.y,2))<10 && e.button===0) handleClick(e.clientX,e.clientY); } if(isPan) isPan=false; }
+        function onMove(e) { if(e.target.closest('.control-btn') || e.target.closest('#track-play-btn') || e.target.closest('#resonate-btn') || e.target.closest('#overlay-container') || e.target.closest('.progress-container') || e.target.closest('#top-bar') || e.target.closest('#main-progress-wrapper')) return; const dx=e.clientX-lastM.x, dy=e.clientY-lastM.y; mX=(e.clientX/window.innerWidth)*2-1; mY=-(e.clientY/window.innerHeight)*2+1; 
             if(isDrag) { 
                 if(!isFocused){ trY+=dx*0.005; trX+=dy*0.005; } 
                 else { fRotY-=dx*0.005; fRotX-=dy*0.005; fRotX=Math.max(-1.5, Math.min(1.5,fRotX)); } 
@@ -1520,14 +2233,6 @@
             // Check if UI is active (profile modal open)
             const overlay = document.getElementById('overlay-container');
             if (overlay.classList.contains('active')) {
-                // If clicking outside the modal box, close it
-                // Note: The modal box itself stops propagation, so clicks here are definitely outside
-                // BUT we need to check target carefully
-                // Actually, due to pointer-events: auto on overlay, any click not on .modal-box (which handles its own clicks or propagates to parent) 
-                // is handled by overlay.onclick defined below.
-                // So handleClick shouldn't fire if overlay is active because overlay covers canvas.
-                // However, we set pointer-events to auto for overlay to capture clicks.
-                // So canvas interactions are blocked by overlay. 
                 return;
             }
 
@@ -1550,10 +2255,26 @@
             if(focusedAlbum) resetFlip(focusedAlbum);
             albums.forEach(g=>{ g.visible=true; g.userData.innerMesh.renderOrder=0; if(Array.isArray(g.userData.innerMesh.material)) g.userData.innerMesh.material.forEach(m=>m.depthTest=true); else g.userData.innerMesh.material.depthTest=true; });
             isFocused=false; focusedAlbum=null; camT.set(0, DEFAULT_CAM_Y, DEFAULT_CAM_Z); camL.set(0,0,0); camUp.set(0,1,0); trX=0; trY=0;
-            audioManager.albumLabelEl.style.opacity='0'; audioManager.stop(); audioManager.hideButton(); audioManager.hideResonateButton();
+            audioManager.albumLabelEl.style.opacity='0'; 
+            audioManager.hideButton(); 
+            audioManager.hideResonateButton();
+            audioManager.hideProgress(); // Hide main progress
+            
+            // Check if playing music
+            if(audioManager.isPlaying || (audioManager.audioEl.src && !audioManager.audioEl.paused)) {
+                audioManager.showMiniPlayer(); // Show mini player
+            } else if (audioManager.currentTrackData) {
+                // If paused but track loaded, also show mini player
+                audioManager.showMiniPlayer(); 
+            }
         }
         function focusOnAlbum(g) {
             isFocused=true; focusedAlbum=g; fRotX=0; fRotY=0;
+            
+            // Hide mini player if showing
+            audioManager.hideMiniPlayer();
+            // Update audio manager with current album data for potential minimize
+            audioManager.updateCurrentInfo(g.userData);
             
             // --- 【重置聚焦状态变量】 ---
             fDist = 8.0; 
@@ -1573,27 +2294,29 @@
             });
             blockers.forEach(b=>b.visible=false);
             const l=g.userData.labelText, inf=albumData[l]||{title:`ALBUM ${l}`,artist:`ARTIST ${g.userData.groupId}`};
-            audioManager.albumLabelEl.innerHTML=`${inf.title}<br><span>${inf.artist}</span>`;
+            
+            // Updated Label Text: Artist + Year
+            audioManager.albumLabelEl.querySelector('#album-title-text').innerHTML=inf.title;
+            audioManager.albumLabelEl.querySelector('#album-artist-text').innerHTML=`<span class="artist-name">${inf.artist}</span><span class="album-year">${inf.year}</span>`;
             audioManager.albumLabelEl.style.opacity='1'; // Fix label visibility
 
             // --- 【显示按钮（点击时检查登录状态）】 ---
-            audioManager.showResonateButton(g);
-            
-            // 检查是否有对应的音频文件
-            const trackSrc = TRACK_SOURCES[l];
-            if(trackSrc) { 
-                audioManager.load(trackSrc); 
-                audioManager.showButton(); 
+            // If logged in, show buttons, else hide
+            if (window.userSystem.isLoggedIn) {
+                audioManager.showResonateButton(g);
+                // Check if audio exists
+                audioManager.checkAndSetupAudio(g.userData.groupId, g.userData.labelText);
             } else {
                 audioManager.hideButton();
+                audioManager.hideResonateButton();
             }
         }
-
-        window.addEventListener('resize', ()=>{ camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
-
+        
+        // ... (rest of main code, animate loop)
         const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
+            // ... (rest of animate function same as previous)
             if (introPhase < 3) {
                 updateIntro();
                 renderer.render(scene, camera);
@@ -1605,8 +2328,6 @@
             // Check if UI overlay is active to pause interaction
             const isUIActive = document.getElementById('overlay-container').classList.contains('active');
 
-            // REMOVED LOGIN CHECK HERE: Auto-rotation and time update now happen always when not focused/dragging
-            // Also check !isUIActive to stop movement when UI is open
             if(!isFocused && !isDrag && !isPan && !isPaused && !isUIActive) { 
                 simTime+=dt; 
                 trY+=0.0005; 
@@ -1615,22 +2336,39 @@
             
             particleMaterial.uniforms.uTime.value=simTime;
             albums.forEach(g=>{
+                // ... (album update logic same as before)
                 const m=g.userData.innerMesh;
-                
-                // REMOVED LOGIN CHECK HERE: Albums rotate along the Mobius strip always
                 if(!isFocused && !isDrag && !isPan && !isPaused && !isUIActive) { 
                     g.userData.u+=dt*0.15; 
                     if(g.userData.u>Math.PI*4) g.userData.u-=Math.PI*4; 
                 }
-                
                 const pos=getMobiusPos(g.userData.u, g.userData.offsetY), look=getMobiusPos(g.userData.u+0.1, g.userData.offsetY);
                 g.position.copy(pos); g.lookAt(look); g.rotateY(Math.PI/2); g.rotateX(g.userData.u*0.5);
                 if(g.userData.posIndex%2===1) g.rotateX(Math.PI);
                 const tf=g.userData.isFlipped?Math.PI:0; m.rotation.y+=(tf-m.rotation.y)*0.1;
                 let ts=1.0; if(isFocused) ts=(g===focusedAlbum)?1.2:0.8; 
                 g.userData.currentScale+=(ts-g.userData.currentScale)*0.1; g.scale.setScalar(g.userData.currentScale);
+                
+                // Blink logic
+                if (g.userData.resonanceParticles && g.userData.resonanceParticles.visible) {
+                    const mat = g.userData.resonanceParticles.material;
+                    if (window.audioManager.isPlaying && window.audioManager.currentTrackData === g.userData) {
+                         const speedFactor = (window.userSystem.userBlinkSpeed / 100) * PARTICLE_BLINK_SPEED_MAX;
+                         const center = (PARTICLE_OPACITY_MAX + PARTICLE_OPACITY_MIN) / 2;
+                         const amp = (PARTICLE_OPACITY_MAX - PARTICLE_OPACITY_MIN) / 2;
+                         if (speedFactor <= 0.1) {
+                             mat.opacity = PARTICLE_OPACITY_BASE;
+                         } else {
+                             const time = Date.now() * 0.005; 
+                             mat.opacity = center + Math.sin(time * speedFactor) * amp;
+                         }
+                    } else {
+                         mat.opacity = PARTICLE_OPACITY_BASE; 
+                    }
+                }
                 g.updateMatrixWorld();
             });
+
             if(!isFocused) {
                 scene.rotation.y = THREE.MathUtils.lerp(scene.rotation.y, trY, 0.05);
                 scene.rotation.x = THREE.MathUtils.lerp(scene.rotation.x, trX, 0.05);
@@ -1639,21 +2377,16 @@
             } else if(focusedAlbum) {
                 const wp=new THREE.Vector3(); focusedAlbum.getWorldPosition(wp);
                 const wq=new THREE.Quaternion(); focusedAlbum.getWorldQuaternion(wq);
-                
-                // --- 【计算聚焦状态下的平移和缩放】 ---
                 const viewRot = new THREE.Euler(fRotX, fRotY, 0, 'YXZ');
-                const panVec = new THREE.Vector3(-fPan.x, fPan.y, 0); // 平移偏移
+                const panVec = new THREE.Vector3(-fPan.x, fPan.y, 0); 
                 panVec.applyEuler(viewRot);
                 panVec.applyQuaternion(wq);
-                const targetFocus = wp.clone().add(panVec); // 目标注视点
-
-                const distVec = new THREE.Vector3(0, 0, fDist); // 缩放距离
+                const targetFocus = wp.clone().add(panVec); 
+                const distVec = new THREE.Vector3(0, 0, fDist); 
                 distVec.applyEuler(viewRot);
                 distVec.applyQuaternion(wq);
-                const targetCamPos = targetFocus.clone().add(distVec); // 目标相机位置
-
+                const targetCamPos = targetFocus.clone().add(distVec); 
                 const tu=new THREE.Vector3(0,1,0).applyQuaternion(wq);
-                
                 camera.position.lerp(targetCamPos, 0.1); 
                 camera.lookAt(targetFocus); 
                 camera.up.lerp(tu, 0.1);
